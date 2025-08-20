@@ -74,39 +74,51 @@
 </head>
 
 <body>
+<div id="sidebar">
 
-     <div id="sidebar">
-          <div class="sidebar-section">
-               <h3>Image Processing</h3>
-               <button id="load-raw-image">Load Image</button>
-               <input type="file" id="raw-image-input" accept="image/*" style="display:none">
+     <!-- LOAD SECTION -->
+     <div class="sidebar-section">
+          <h3>Load</h3>
+          <button id="load-raw-image">Load Image</button>
+          <input type="file" id="raw-image-input" accept="image/*" style="display:none">
+          <input type="file" id="fileInput" >
+     </div>
 
-               <div class="label-input">
-                    <label for="tile-size-input">Tile Size:</label>
-                    <input type="number" id="tile-size-input" value="1" min="1">
-               </div>
+     <!-- SETTINGS & APPLY SECTION -->
+     <div class="sidebar-section">
+          <h3>Settings & Apply</h3>
+          <div class="label-input">
+               <label for="tile-size-input">Tile Size:</label>
+               <input type="number" id="tile-size-input" value="1" min="1">
+          </div>
+          <div class="label-input">
+               <label for="color-count-input">Colors:</label>
+               <input type="number" id="color-count-input" value="16" min="2" max="256">
+          </div>
+          <label><input type="checkbox" id="toggleGrid"> Show Grid</label>
+          <button id="quantize-tile-btn" disabled>Quantize & Tile</button>
+     </div>
 
-               <div class="label-input">
-                    <label for="color-count-input">Colors:</label>
-                    <input type="number" id="color-count-input" value="16" min="2" max="256">
-               </div>
+     <!-- COLORS / PALETTE SECTION -->
+     <div class="sidebar-section">
+          <h3>Colors & Palette</h3>
+          <input type="color" id="colorPicker" value="#ff0000" />
+          <button id="createPalette">Create Palette</button>
+          <div id="color-palette"></div>
+          <div class="swatches" id="swatchesContainer"></div>
+     </div>
 
-               <button id="quantize-tile-btn" disabled>Quantize & Tile</button>
-               <input type="color" id="color-picker" value="#ff0000" />
-               <div id="color-palette"></div>
+     <!-- TOOLS SECTION -->
+     <div class="sidebar-section">
+          <h3>Tools</h3>
+          <div id="controls">
 
-               <input type="file" id="fileInput">
-               <div id="controls">
-                    <input type="color" id="colorPicker">
-                    <button id="eraseBtn">Erase Selected Color</button>
-                    <button id="createPalette">Create Palette</button>
-                    <label><input type="checkbox" id="toggleGrid"> Show Grid</label>
-               </div>
-
-               <div class="swatches" id="swatchesContainer"></div>
+               <button id="eraseBtn">Erase Selected Color</button>
 
           </div>
      </div>
+
+</div>
 
      <div id="canvas-container">
           <canvas id="canvas"></canvas>
