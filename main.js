@@ -290,93 +290,7 @@ function kMeansQuantize(img, k = 16) {
 	}
 	return palette;
 }
-//=========================
-// CANVAS MANAGER
-//=========================
-/*
-// TODO TO INTEGRATE BORROWED METHODS
- drawTiledPixels(layer, img, tileSize = 20, palette = null) {
-		  const ctx = layer.ctx;
-		  ctx.clearRect(0, 0, layer.width, layer.height);
-		  ctx.imageSmoothingEnabled = false;
 
-		  const tempCanvas = document.createElement("canvas");
-		  tempCanvas.width = layer.width;
-		  tempCanvas.height = layer.height;
-		  const tctx = tempCanvas.getContext("2d");
-		  tctx.imageSmoothingEnabled = false;
-		  tctx.drawImage(img, 0, 0, layer.width, layer.height);
-
-		  for (let y = 0; y < layer.height; y += tileSize) {
-			   for (let x = 0; x < layer.width; x += tileSize) {
-					const px = tctx.getImageData(x, y, 1, 1).data;
-					let color = px;
-					if (palette) color = this.findClosestColor(px, palette);
-
-					const w = Math.min(tileSize, layer.width - x);
-					const h = Math.min(tileSize, layer.height - y);
-
-					ctx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},${
-						 color[3] / 255
-					})`;
-					ctx.fillRect(x, y, w, h);
-			   }
-		  }
-	 }
-
- findClosestColor(px, palette) {
-		  let minDist = Infinity,
-			   closest = px;
-		  for (const c of palette) {
-			   const d =
-					(px[0] - c[0]) ** 2 +
-					(px[1] - c[1]) ** 2 +
-					(px[2] - c[2]) ** 2;
-			   if (d < minDist) {
-					minDist = d;
-					closest = c;
-			   }
-		  }
-		  return [...closest, px[3]];
-	 }
-
-	 applyQuantizeAndTile(img, k = 16) {
-		  const rgbPalette = kMeansQuantize(img, k);
-
-		  let hexPalette = rgbPalette.map((c) => Colors.rgbToHex(c));
-
-		  const layer = new Layer(
-			   this.width,
-			   this.height,
-			   `Layer ${this.layers.length}`
-		  );
-		  this.drawTiledPixels(layer, img, this.tileSize, rgbPalette);
-		  this.layers.push(layer);
-
-		  hexPalette = [...new Set(hexPalette)];
-		  const sortedHexPalette = Colors.smoothSortPalette(hexPalette);
-		  const sortedRgbPalette = sortedHexPalette.map((c) =>
-			   Colors.hexToRgb(c)
-		  );
-
-		  return sortedHexPalette;
-	 }
-*/
-
-// TODO INTEGRATE THIS TO LOAD IN CANVAS -DONE
-/*
-function fitCanvasToImage(img) {
-	 const container = document.getElementById("canvas-container");
-	 const ratio = Math.min(
-		  container.clientWidth / img.width,
-		  container.clientHeight / img.height
-	 );
-	 canvasManager.resizeCanvas(
-		  Math.round(img.width * ratio),
-		  Math.round(img.height * ratio)
-	 );
-}
-*/
 //=========================
 // LAYER CLASS
 //=========================
@@ -389,6 +303,152 @@ class Layer {
 		this.colors = []; // [{r,g,b,pixels,erased}]
 	}
 }
+
+
+class DrawingTool {
+	constructor (canvas, colorPicker, modeSelect, displayEl, tileSize = 16) {
+		this.canvas = canvas;
+		this.ctx = canvas.getContext("2d");
+		this.colorPicker = colorPicker;
+		this.modeSelect = modeSelect;
+		this.displayEl = displayEl;
+		this.tileSize = tileSize;
+
+		this.drawing = false;
+		this.start = null;
+
+		this.currentColor = { r: 0, g: 0, b: 0 };
+		this.mode = "N";
+		this.isEraser = false;
+
+		this.bindEvents();
+		this.updateDisplay();
+	}
+
+	bindEvents() {
+		this.canvas.addEventListener("mousedown", e => this.startDraw(e));
+		this.canvas.addEventListener("mousemove", e => this.drawMove(e));
+		this.canvas.addEventListener("mouseup", e => this.endDraw(e));
+		this.canvas.addEventListener("mouseleave", e => this.endDraw(e));
+
+		this.colorPicker.addEventListener("input", e => {
+			const hex = e.target.value;
+			this.currentColor = {
+				r: parseInt(hex.substr(1, 2), 16),
+				g: parseInt(hex.substr(3, 2), 16),
+				b: parseInt(hex.substr(5, 2), 16),
+			};
+			this.isEraser = false;
+			this.updateDisplay();
+		});
+
+		this.modeSelect.addEventListener("change", e => {
+			this.mode = e.target.value;
+			this.updateDisplay();
+		});
+	}
+
+	updateDisplay() {
+		this.displayEl.textContent = `Mode: ${this.mode} | Color: ${this.isEraser ? "Eraser" : this.colorPicker.value}`;
+	}
+
+	getMouseTile(e) {
+		const rect = this.canvas.getBoundingClientRect();
+		const x = Math.floor((e.clientX - rect.left) / this.tileSize);
+		const y = Math.floor((e.clientY - rect.top) / this.tileSize);
+		return { x, y };
+	}
+
+	startDraw(e) {
+		// Update color on draw start
+		const hex = this.colorPicker.value;
+		this.currentColor = {
+			r: parseInt(hex.substr(1, 2), 16),
+			g: parseInt(hex.substr(3, 2), 16),
+			b: parseInt(hex.substr(5, 2), 16),
+		};
+		this.isEraser = this.isEraser; // keep current tool
+
+		this.drawing = true;
+		this.start = this.getMouseTile(e);
+		this.drawLine(this.start, this.start);
+	}
+
+
+	drawMove(e) {
+		if (!this.drawing) return;
+		const pos = this.getMouseTile(e);
+		this.drawLine(this.start, pos);
+		this.start = pos;
+	}
+
+	endDraw(e) {
+		if (!this.drawing) return;
+		this.drawing = false;
+		this.start = null;
+	}
+
+	drawLine(p0, p1) {
+		const pixels = this.bresenham(p0.x, p0.y, p1.x, p1.y);
+		pixels.forEach(({ x, y }) => {
+			this.applyTile(x, y);
+		});
+	}
+
+	bresenham(x0, y0, x1, y1) {
+		const pixels = [];
+		let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+		let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+		let err = dx + dy;
+
+		while (true) {
+			pixels.push({ x: x0, y: y0 });
+			if (x0 === x1 && y0 === y1) break;
+			const e2 = 2 * err;
+			if (e2 >= dy) { err += dy; x0 += sx; }
+			if (e2 <= dx) { err += dx; y0 += sy; }
+		}
+		return pixels;
+	}
+
+	applyTile(tx, ty) {
+		const size = this.tileSize;
+		const colors = this.isEraser ? { r: 255, g: 255, b: 255 } : this.currentColor;
+
+		// Draw main tile
+		this.ctx.fillStyle = `rgb(${colors.r},${colors.g},${colors.b})`;
+		this.ctx.fillRect(tx * size, ty * size, size, size);
+
+		// Apply mirrored modes
+		const w = Math.floor(this.canvas.width / size);
+		const h = Math.floor(this.canvas.height / size);
+
+		switch (this.mode) {
+			case "H":
+				this.ctx.fillRect((w - tx - 1) * size, ty * size, size, size);
+				break;
+			case "V":
+				this.ctx.fillRect(tx * size, (h - ty - 1) * size, size, size);
+				break;
+			case "B":
+				this.ctx.fillRect((w - tx - 1) * size, ty * size, size, size);
+				this.ctx.fillRect(tx * size, (h - ty - 1) * size, size, size);
+				this.ctx.fillRect((w - tx - 1) * size, (h - ty - 1) * size, size, size);
+				break;
+			case "D":
+				this.ctx.fillRect(ty * size, tx * size, size, size);
+				break;
+		}
+	}
+
+	setEraser() {
+		this.isEraser = true;
+		this.updateDisplay();
+	}
+}
+
+
+
 
 //=========================
 // CANVAS MANAGER
@@ -814,3 +874,19 @@ document
 
 
 	});
+const modeSelect = document.getElementById("modeSelect");
+const displayEl = document.getElementById("display");
+const tileSize = 16; // size of each tile
+
+const tool = new DrawingTool(canvas, colorPicker, modeSelect, displayEl, tileSize);
+
+// Brush / Eraser toggle
+document.querySelectorAll('input[name="toolMode"]').forEach(radio => {
+	radio.addEventListener("change", () => {
+		tool.isEraser = radio.value === "eraser";
+		tool.updateDisplay();
+	});
+});
+
+// Optional: when picking a color, revert to brush automatically
+colorPicker.addEventListener("input", () => tool.isEraser = false);

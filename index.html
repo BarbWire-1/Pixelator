@@ -104,7 +104,10 @@
           <h3>Colors & Palette</h3>
           <input type="color" id="colorPicker" value="#ff0000" />
           <button id="createPalette">Create Palette</button>
-          <div id="color-palette"></div>
+          <div id="color-palette">
+               <!-- Erase Selected Color Button -->
+               <button id="eraseBtn">Erase Selected Color</button>
+          </div>
           <div class="swatches" id="swatchesContainer"></div>
      </div>
 
@@ -112,11 +115,27 @@
      <div class="sidebar-section">
           <h3>Tools</h3>
           <div id="controls">
+               <!-- Brush / Eraser -->
+               <label>
+                    <input type="radio" name="toolMode" value="brush" checked> Brush
+               </label>
+               <label>
+                    <input type="radio" name="toolMode" value="eraser"> Eraser
+               </label>
 
-               <button id="eraseBtn">Erase Selected Color</button>
+               <!-- Mirror Mode -->
+               <select id="modeSelect">
+                    <option value="N">Normal</option>
+                    <option value="H">Horizontal Mirror</option>
+                    <option value="V">Vertical Mirror</option>
+                    <option value="B">Both H+V</option>
+                    <option value="D">Diagonal</option>
+               </select>
+               <div id="display"></div>
 
           </div>
      </div>
+
 
 </div>
 
