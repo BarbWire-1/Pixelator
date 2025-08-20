@@ -1,7 +1,13 @@
 import { DrawingTool } from "./DrawingTool.js";
 
 import { CanvasManager } from "./Canvas.js";
-import {PaletteManager} from "./PaletteManager.js"
+import { PaletteManager } from "./PaletteManager.js"
+
+// TODO - on swatch select click colorPicker, set position near swatch
+// TODO add range to CSS scale - check mousePos
+// TODO implement drawing correct so has acces to tiles and imagedata binding
+// TODO add download button
+// TODO implement history
 
 
 
