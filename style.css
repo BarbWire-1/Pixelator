@@ -1,0 +1,179 @@
+/* ================== Base ================== */
+body {
+     font-family: sans-serif;
+     background: #222;
+     color: #eee;
+     margin: 0;
+     display: flex;
+     flex-direction: row-reverse;
+     /* sidebar on the right */
+     height: 100vh;
+}
+
+/* ================== Sidebar ================== */
+#sidebar {
+     width: 300px;
+     background: #2a2a2a;
+     padding: 15px;
+     display: flex;
+     flex-direction: column;
+     gap: 15px;
+     border-left: 2px solid #444;
+     box-sizing: border-box;
+}
+
+.sidebar-section {
+     background: #333;
+     padding: 10px;
+     border-radius: 8px;
+     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+     display: flex;
+     flex-direction: column;
+     gap: 12px;
+}
+
+.sidebar-section h3 {
+     margin: 0 0 6px 0;
+     font-size: 16px;
+     border-bottom: 1px solid #555;
+     padding-bottom: 4px;
+     color: #0af;
+}
+
+/* ================== Canvas ================== */
+#canvas-container {
+     flex-grow: 1;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     padding: 20px;
+     box-sizing: border-box;
+     overflow: auto;
+     overflow-x: hidden;
+}
+
+canvas {
+     border: 1px solid #444;
+     background: white;
+     image-rendering: pixelated;
+}
+
+/* ================== Color Palette ================== */
+#color-palette {
+     display: grid;
+     grid-template-columns: repeat(auto-fill, 20px);
+     gap: 1px;
+     margin-top: 6px;
+}
+
+/* ================== Label + Input ================== */
+.label-input {
+     display: flex;
+     justify-content: space-between;
+     /* pushes label left, input right */
+     align-items: center;
+     gap: 10px;
+}
+
+.label-input label {
+     text-align: left;
+     /* label text left-aligned */
+     flex-shrink: 0;
+     width: 100px;
+     /* fixed width for all labels */
+     color: #eee;
+     font-size: 14px;
+}
+
+.label-input input[type="number"],
+.label-input input[type="text"],
+.label-input select {
+     width: 80px;
+     /* same width for all inputs */
+     padding: 4px 6px;
+     border-radius: 4px;
+     border: 1px solid #555;
+     background: #222;
+     color: #eee;
+     font-size: 14px;
+     text-align: right;
+     /* input text right-aligned */
+     box-sizing: border-box;
+}
+
+/* ================== Buttons ================== */
+button {
+     padding: 6px 12px;
+     border: none;
+     border-radius: 4px;
+     background: #0af;
+     color: #222;
+     cursor: pointer;
+     font-size: 14px;
+}
+
+button:disabled {
+     background: #555;
+     cursor: not-allowed;
+}
+
+/* ================== Spinner ================== */
+.spinner {
+     border: 8px solid #f3f3f3;
+     border-top: 8px solid #3498db;
+     border-radius: 50%;
+     width: 60px;
+     height: 60px;
+     animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+     0% {
+          transform: rotate(0deg);
+     }
+
+     100% {
+          transform: rotate(360deg);
+     }
+}
+
+#color-palette {
+     display: flex;
+     flex-wrap: wrap;
+}
+
+.swatch {
+     width: 20px;
+     height: 20px;
+     margin: 2px;
+     cursor: pointer;
+}
+
+.swatch.selected {
+     outline: 2px solid red;
+}
+
+canvas {
+     image-rendering: pixelated;
+     image-rendering: crisp-edges;
+     /* fallback */
+}
+
+.swatch.erased {
+     position: relative;
+     background: repeating-linear-gradient(45deg,
+               white,
+               white 4px,
+               transparent 4px,
+               transparent 8px);
+}
+
+.swatch.erased::after {
+     content: "✕";
+     color: rgba(255, 255, 255, 0.9);
+     font-weight: bold;
+     position: absolute;
+     top: 50%;
+     left: 50%;
+     transform: translate(-50%, -50%);
+}
