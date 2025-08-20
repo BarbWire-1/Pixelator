@@ -169,6 +169,73 @@ class Colors {
 
 		return bestOrder.map((o) => o.hex);
 	}
+
+
+
+
+	// Accepts: ["#rrggbb", ...] OR [{r,g,b,...}, ...]
+	// Returns the same type it was given (hex strings or the original objects)
+	static smoothSort(palette) {
+		if (!Array.isArray(palette) || palette.length <= 2) return palette?.slice?.() ?? palette;
+
+		// Build a list with LAB precomputed + a reference to the original item
+		const items = palette.map(item => {
+			if (typeof item === "string") {
+				// hex input
+				return { ref: item, lab: Colors.hexToLab(item) };
+			} else {
+				// object input with r,g,b
+				const lab =
+					item.lab
+						? item.lab
+						: (Colors.rgbToLab
+							? Colors.rgbToLab(item.r, item.g, item.b)
+							: Colors.hexToLab(Colors.rgbToHex(item.r, item.g, item.b)));
+				return { ref: item, lab };
+			}
+		});
+
+		// Nearest-neighbor with multi-start; O(n^3) but fine for typical palette sizes
+		let bestOrder = null;
+		let bestScore = Infinity;
+
+		for (let start = 0; start < items.length; start++) {
+			const remaining = items.slice();
+			let current = remaining.splice(start, 1)[ 0 ];
+			const ordered = [ current ];
+
+			while (remaining.length) {
+				let nearestIdx = 0;
+				let nearestDist = Infinity;
+				for (let i = 0; i < remaining.length; i++) {
+					const d = Colors.deltaE(current.lab, remaining[ i ].lab);
+					if (d < nearestDist) { nearestDist = d; nearestIdx = i; }
+				}
+				current = remaining.splice(nearestIdx, 1)[ 0 ];
+				ordered.push(current);
+			}
+
+			// Sum ΔE along the path
+			let score = 0;
+			for (let i = 1; i < ordered.length; i++) {
+				score += Colors.deltaE(ordered[ i - 1 ].lab, ordered[ i ].lab);
+			}
+
+			if (score < bestScore) {
+				bestScore = score;
+				bestOrder = ordered;
+			}
+		}
+
+		// Return same type as input (hex strings or original objects w/ pixels intact)
+		return bestOrder.map(n => n.ref);
+	}
+
+	// Fallback if you don’t already have it:
+	static rgbToHex(r, g, b) {
+		return "#" + [ r, g, b ].map(v => v.toString(16).padStart(2, "0")).join("");
+	}
+
 }
 
 // =======================
@@ -329,7 +396,7 @@ class Layer {
 class CanvasManager {
 	constructor (canvas) {
 		this.canvas = canvas;
-		this.ctx = canvas.getContext("2d");
+		this.ctx = canvas.getContext("2d", { willReadFrequently: true });
 		this.layers = [];
 		this.activeLayer = null;
 		this.toggleGrid = false;
@@ -419,6 +486,7 @@ class CanvasManager {
 	//  Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently
 	// THIS IS AWFULLY HEAVY
 	drawTiled(layer, img, tileSize = 20, palette = null) {
+		// Draw raw image to temp canvas
 		const tempCanvas = document.createElement("canvas");
 		tempCanvas.width = layer.width;
 		tempCanvas.height = layer.height;
@@ -426,28 +494,41 @@ class CanvasManager {
 		tctx.imageSmoothingEnabled = false;
 		tctx.drawImage(img, 0, 0, layer.width, layer.height);
 
-		const outputCanvas = document.createElement("canvas");
-		outputCanvas.width = layer.width;
-		outputCanvas.height = layer.height;
-		const octx = outputCanvas.getContext("2d");
-		octx.imageSmoothingEnabled = false;
+		// ✅ Store raw pixel data ONCE
+		layer.rawPixelData = tctx.getImageData(0, 0, layer.width, layer.height).data;
+
+		// Create output ImageData
+		const outputImageData = tctx.createImageData(layer.width, layer.height);
+		const outData = outputImageData.data;
 
 		for (let y = 0; y < layer.height; y += tileSize) {
 			for (let x = 0; x < layer.width; x += tileSize) {
-				const px = tctx.getImageData(x, y, 1, 1).data;
-				let color = px;
-				if (palette) color = this.findClosestColor(px, palette);
+				const idx = (y * layer.width + x) * 4;
+				let color = [
+					layer.rawPixelData[ idx ],
+					layer.rawPixelData[ idx + 1 ],
+					layer.rawPixelData[ idx + 2 ],
+					layer.rawPixelData[ idx + 3 ]
+				];
+
+				if (palette) color = this.findClosestColor(color, palette);
 
 				const w = Math.min(tileSize, layer.width - x);
 				const h = Math.min(tileSize, layer.height - y);
 
-				octx.fillStyle = `rgba(${color[ 0 ]},${color[ 1 ]},${color[ 2 ]},${color[ 3 ] / 255})`;
-				octx.fillRect(x, y, w, h);
+				for (let ty = 0; ty < h; ty++) {
+					for (let tx = 0; tx < w; tx++) {
+						const outIdx = ((y + ty) * layer.width + (x + tx)) * 4;
+						outData[ outIdx ] = color[ 0 ];
+						outData[ outIdx + 1 ] = color[ 1 ];
+						outData[ outIdx + 2 ] = color[ 2 ];
+						outData[ outIdx + 3 ] = color[ 3 ];
+					}
+				}
 			}
 		}
 
-		// Store into layer.imageData
-		layer.imageData = octx.getImageData(0, 0, layer.width, layer.height);
+		layer.imageData = outputImageData;
 	}
 
 	findClosestColor(px, palette) {
@@ -485,7 +566,7 @@ class CanvasManager {
 		this.redraw();
 	}
 
-	drawBoundingBox(pixels, color = "blue") {
+	drawBoundingBox(pixels, color = "limegreen") {
 		if (!pixels.length) return;
 		let minX = this.canvas.width,
 			maxX = -1,
@@ -502,7 +583,7 @@ class CanvasManager {
 		});
 		this.ctx.strokeStyle = color;
 		this.ctx.lineWidth = 2;
-		this.ctx.setLineDash([ 6, 4 ]);
+		//this.ctx.setLineDash([ 6, 4 ]);
 		this.ctx.strokeRect(
 			minX - 0.5,
 			minY - 0.5,
@@ -602,28 +683,38 @@ class PaletteManager {
 			colorMap[ key ].push(i);
 		}
 
+		// Convert map → array
+		let palette = Object.entries(colorMap).map(([ k, pixels ]) => {
+			const [ r, g, b ] = k.split(",").map(Number);
+			return { r, g, b, pixels };
+		});
+
+		// 🔹 your existing smoother
+		palette = Colors.smoothSort(palette);
+
+		// First add the deselect swatch
 		const deselectDiv = document.createElement("div");
 		deselectDiv.className = "swatch deselect";
 		deselectDiv.title = "Deselect";
 		this.container.appendChild(deselectDiv);
 
-		Object.entries(colorMap).forEach(([ k, pixels ]) => {
-			const [ r, g, b ] = k.split(",").map(Number);
+		// Build swatches in sorted order
+		palette.forEach(({ r, g, b, pixels }) => {
 			const div = document.createElement("div");
 			div.className = "swatch";
 			div.style.backgroundColor = `rgb(${r},${g},${b})`;
 			this.container.appendChild(div);
+
 			this.swatches.push({
 				r,
 				g,
 				b,
-				pixels: pixels.map((idx) => ({ index: idx })),
+				pixels: pixels.map(idx => ({ index: idx })),
 				div
 			});
-
-			//console.log(this.swatches); // holds a map for earch rgb in image!!!!!!!
 		});
 	}
+
 
 	rgbToHex(r, g, b) {
 		return (
@@ -701,17 +792,14 @@ document
 		});
 
 		await cm.loadImageAsync(img);
-
 		document.getElementById("quantize-tile-btn").disabled = false;
-
-		e.target.value = "";
+		//e.target.value = "";
 	});
 
 document
 	.getElementById("quantize-tile-btn")
 	.addEventListener("click", async () => {
 		if (!cm.activeLayer || !cm.rawImage) return;
-
 		const tileSize =
 			parseInt(document.getElementById("tile-size-input").value, 10) ||
 			1;
@@ -720,9 +808,9 @@ document
 				document.getElementById("color-count-input").value,
 				10
 			) || 16;
-		console.log(cm.rawImage); // WTF???? <img src="blob:https://cdpn.io/80547374-c622-42b7-b6a6-1a14b004f6f2">
+
 		// 🔹 use the stored image, not the canvas
 		await cm.applyQuantizeAndTile(cm.rawImage, colorCount, tileSize);
 
-		pm.createPalette();
+
 	});
