@@ -200,7 +200,7 @@ snapshot()
 const zoomInput = document.getElementById("zoom");
 const container = canvas.parentNode
 
-zoomInput.addEventListener("input", () => {
+zoomInput.addEventListener("change", () => {
 	const scale = parseFloat(zoomInput.value);
 	container.style.transform = `scale(${scale})`;
 	container.style.transformOrigin = "center center";
