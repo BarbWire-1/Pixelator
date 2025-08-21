@@ -404,7 +404,7 @@ input[type="number"] {
 
 /* Canvas container fills remaining space */
 #canvas-container {
-     margin-right: 350px;
+     margin-right: 370px;
      /* leave space for sidebar */
      flex-grow: 1;
      display: flex;
