@@ -5,69 +5,7 @@
      <meta charset="UTF-8">
      <title>CanvasManager + PaletteManager</title>
      <style>
-          body {
-               font-family: sans-serif;
-               padding: 20px;
-          }
 
-          canvas {
-               border: 1px solid #000;
-               display: block;
-               margin-bottom: 10px;
-          }
-
-          #controls {
-               display: flex;
-               align-items: center;
-               gap: 10px;
-               margin-bottom: 10px;
-          }
-
-          .swatches {
-               display: flex;
-               flex-wrap: wrap;
-               gap: 4px;
-          }
-
-          .swatch {
-               width: 24px;
-               height: 24px;
-               border: 1px solid #000;
-               cursor: pointer;
-               position: relative;
-          }
-
-          .swatch.selected {
-               outline: 2px solid blue;
-          }
-
-          .swatch.transparent::after {
-               content: '';
-               position: absolute;
-               top: 0;
-               left: 0;
-               width: 100%;
-               height: 100%;
-               background:
-                    repeating-linear-gradient(45deg, white 0, white 1px, transparent 1px, transparent 6px),
-                    repeating-linear-gradient(-45deg, white 0, white 1px, transparent 1px, transparent 6px);
-               pointer-events: none;
-          }
-
-          .swatch.deselect::after {
-               content: '×';
-               position: absolute;
-               top: 0;
-               left: 0;
-               width: 100%;
-               height: 100%;
-               display: flex;
-               align-items: center;
-               justify-content: center;
-               color: red;
-               font-weight: bold;
-               pointer-events: none;
-          }
      </style>
      <link rel="stylesheet" href="style.css">
      <script type="module" src="main.js"></script>
@@ -79,10 +17,11 @@
      <!-- LOAD SECTION -->
      <div class="sidebar-section">
           <h3>Load</h3>
-          <button id="load-raw-image">Load Image</button>
-          <input type="file" id="raw-image-input" accept="image/*" style="display:none">
-          <input type="file" id="fileInput" >
+
+          <!-- Just one input, styled like a button -->
+          <input type="file" id="raw-image-input" accept="image/*" class="file-btn">
      </div>
+
 
      <div class="sidebar-section">
           <h3>History</h3>
@@ -103,16 +42,20 @@
           </div>
           <label><input type="checkbox" id="toggleGrid"> Show Grid</label>
           <button id="quantize-tile-btn" disabled>Quantize & Tile</button>
+          <input type="range" id="zoom" min=".1" max="3" value="1">
      </div>
 
      <!-- COLORS / PALETTE SECTION -->
      <div class="sidebar-section">
           <h3>Colors & Palette</h3>
-          <input type="color" id="colorPicker" value="#ff0000" />
-          <!-- <button id="createPalette">Create Palette</button> -->
+
+
+          <button id="createPalette">Create Palette</button>
+          <!-- Erase Selected Color Button -->
+          <button id="eraseBtn">Erase Selected Color</button>
+          <input type="color" id="colorPicker"  class="circle-picker" value="#ff0000" />
           <div id="color-palette">
-               <!-- Erase Selected Color Button -->
-               <button id="eraseBtn">Erase Selected Color</button>
+
           </div>
           <div class="swatches" id="swatchesContainer"></div>
      </div>
@@ -144,194 +87,12 @@
 
 
 </div>
-
-     <div id="canvas-container">
+<div id="canvas-container">
+     <div id="canvas-wrapper">
           <canvas id="canvas"></canvas>
      </div>
+</div>
 
-     <script>
-          /*
-          class CanvasManager {
-               constructor(canvas) {
-                    this.canvas = canvas;
-                    this.ctx = canvas.getContext('2d');
-                    this.activeLayer = null;
-                    this.toggleGrid = false;
-               }
-               loadImage(img) {
-                    this.canvas.width = img.width;
-                    this.canvas.height = img.height;
-                    this.ctx.drawImage(img, 0, 0);
-                    const data = this.ctx.getImageData(0, 0, img.width, img.height);
-                    this.activeLayer = {
-                         imageData: data
-                    };
-                    this.redraw();
-               }
-               redraw() {
-                    if (!this.activeLayer) return;
-                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                    this.ctx.putImageData(this.activeLayer.imageData, 0, 0);
-                    if (this.toggleGrid) this.drawGrid();
-               }
-               drawGrid() {
-                    const w = this.canvas.width,
-                         h = this.canvas.height;
-                    this.ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-                    for (let x = 0; x <= w; x++) {
-                         this.ctx.beginPath();
-                         this.ctx.moveTo(x + 0.5, 0);
-                         this.ctx.lineTo(x + 0.5, h);
-                         this.ctx.stroke();
-                    }
-                    for (let y = 0; y <= h; y++) {
-                         this.ctx.beginPath();
-                         this.ctx.moveTo(0, y + 0.5);
-                         this.ctx.lineTo(w, y + 0.5);
-                         this.ctx.stroke();
-                    }
-               }
-               drawBoundingBox(pixels, color = 'blue') {
-                    if (!pixels.length) return;
-                    let minX = this.canvas.width,
-                         maxX = -1,
-                         minY = this.canvas.height,
-                         maxY = -1;
-                    pixels.forEach(p => {
-                         const idx = p.index / 4;
-                         const x = idx % this.canvas.width;
-                         const y = Math.floor(idx / this.canvas.width);
-                         minX = Math.min(minX, x);
-                         maxX = Math.max(maxX, x);
-                         minY = Math.min(minY, y);
-                         maxY = Math.max(maxY, y);
-                    });
-                    this.ctx.strokeStyle = color;
-                    this.ctx.lineWidth = 2;
-                    this.ctx.setLineDash([6, 4]);
-                    this.ctx.strokeRect(minX - 0.5, minY - 0.5, maxX - minX + 1, maxY - minY + 1);
-                    this.ctx.setLineDash([]);
-               }
-          }
-          class PaletteManager {
-               constructor(cm, swatchesContainer) {
-                    this.cm = cm;
-                    this.container = swatchesContainer;
-                    this.swatches = [];
-                    this.selectedSwatch = null;
-               }
-               createPalette() {
-                    if (!this.cm.activeLayer) return;
-                    this.container.innerHTML = '';
-                    this.swatches = [];
-                    // --- Create deselect swatch ---
-                    const deselectDiv = document.createElement('div');
-                    deselectDiv.className = 'swatch deselect';
-                    deselectDiv.title = 'Deselect';
-                    deselectDiv.addEventListener('click', () => {
-                         if (this.selectedSwatch) this.selectedSwatch.div.classList.remove('selected');
-                         this.selectedSwatch = null;
-                         this.cm.redraw();
-                         colorPicker.value = '#000000'; // reset picker to black or your default
-                    });
-                    this.container.appendChild(deselectDiv);
-                    const data = this.cm.activeLayer.imageData.data;
-                    const colorMap = {};
-                    for (let i = 0; i < data.length; i += 4) {
-                         const key = `${data[i]},${data[i + 1]},${data[i + 2]}`;
-                         if (!colorMap[key]) colorMap[key] = [];
-                         colorMap[key].push(i);
-                    }
-                    Object.keys(colorMap).forEach(key => {
-                         const [r, g, b] = key.split(',').map(Number);
-                         const pixels = colorMap[key].map(i => ({
-                              index: i
-                         }));
-                         const swatch = {
-                              r,
-                              g,
-                              b,
-                              pixels,
-                              erased: false
-                         };
-                         const div = document.createElement('div');
-                         div.className = 'swatch';
-                         div.style.backgroundColor = `rgb(${r},${g},${b})`;
-                         swatch.div = div;
-                         if (pixels.every(p => data[p.index + 3] === 0)) div.classList.add('transparent');
-                         div.addEventListener('click', () => {
-                              if (this.selectedSwatch) this.selectedSwatch.div.classList.remove('selected');
-                              div.classList.add('selected');
-                              this.selectedSwatch = swatch;
-                              this.cm.redraw();
-                              this.cm.drawBoundingBox(swatch.pixels);
-                              colorPicker.value = this.rgbToHex(r, g, b);
-                         });
-                         this.container.appendChild(div);
-                         this.swatches.push(swatch);
-                    });
-               }
-               recolor(hex) {
-                    if (!this.selectedSwatch) return;
-                    const rgb = this.hexToRgb(hex);
-                    const data = this.cm.activeLayer.imageData.data;
-                    this.selectedSwatch.r = rgb[0];
-                    this.selectedSwatch.g = rgb[1];
-                    this.selectedSwatch.b = rgb[2];
-                    this.selectedSwatch.erased = false;
-                    this.selectedSwatch.div.style.backgroundColor = hex;
-                    this.selectedSwatch.div.classList.remove('transparent');
-                    this.selectedSwatch.pixels.forEach(p => {
-                         data[p.index] = rgb[0];
-                         data[p.index + 1] = rgb[1];
-                         data[p.index + 2] = rgb[2];
-                         data[p.index + 3] = 255;
-                    });
-                    this.cm.redraw();
-                    this.cm.drawBoundingBox(this.selectedSwatch.pixels);
-               }
-               eraseSelected() {
-                    if (!this.selectedSwatch) return;
-                    const data = this.cm.activeLayer.imageData.data;
-                    this.selectedSwatch.pixels.forEach(p => data[p.index + 3] = 0);
-                    this.selectedSwatch.erased = true;
-                    this.selectedSwatch.div.classList.add('transparent');
-                    this.cm.redraw();
-                    this.cm.drawBoundingBox(this.selectedSwatch.pixels);
-               }
-               hexToRgb(hex) {
-                    hex = hex.replace('#', '');
-                    return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
-               }
-               rgbToHex(r, g, b) {
-                    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-               }
-          }
-          const canvas = document.getElementById('canvas');
-          const cm = new CanvasManager(canvas);
-          const swatchesContainer = document.getElementById('swatchesContainer');
-          const pm = new PaletteManager(cm, swatchesContainer);
-          const fileInput = document.getElementById('fileInput');
-          const colorPicker = document.getElementById('colorPicker');
-          const eraseBtn = document.getElementById('eraseBtn');
-          const createPaletteBtn = document.getElementById('createPalette');
-          const toggleGridCheckbox = document.getElementById('toggleGrid');
-          fileInput.addEventListener('change', e => {
-               const file = e.target.files[0];
-               if (!file) return;
-               const img = new Image();
-               img.onload = () => cm.loadImage(img);
-               img.src = URL.createObjectURL(file);
-          });
-          colorPicker.addEventListener('input', () => pm.recolor(colorPicker.value));
-          eraseBtn.addEventListener('click', () => pm.eraseSelected());
-          createPaletteBtn.addEventListener('click', () => pm.createPalette());
-          toggleGridCheckbox.addEventListener('change', () => {
-               cm.toggleGrid = toggleGridCheckbox.checked;
-               cm.redraw();
-          });
-*/
-     </script>
 </body>
 
 </html>

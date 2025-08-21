@@ -50,10 +50,15 @@ export class DrawingTool {
 
 	getMouseTile(e) {
 		const rect = this.canvas.getBoundingClientRect();
-		const x = Math.floor((e.clientX - rect.left) / this.cm.tileSize);
-		const y = Math.floor((e.clientY - rect.top) / this.cm.tileSize);
+		const scaleX = this.canvas.width / rect.width;
+		const scaleY = this.canvas.height / rect.height;
+
+		const x = Math.floor((e.clientX - rect.left) * scaleX / this.cm.tileSize);
+		const y = Math.floor((e.clientY - rect.top) * scaleY / this.cm.tileSize);
+
 		return { x, y };
 	}
+
 
 	startDraw(e) {
 		// Update color on draw start
@@ -136,7 +141,7 @@ export class DrawingTool {
 			}
 		}
 
-		
+
 		const mirrors = [];
 
 		switch (this.mode) {

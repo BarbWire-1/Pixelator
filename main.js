@@ -32,7 +32,7 @@ const swatchesContainer = document.getElementById("swatchesContainer");
 const colorPicker = document.getElementById("colorPicker");
 const pm = new PaletteManager(cm, swatchesContainer, colorPicker);
 
-const fileInput = document.getElementById("fileInput");
+
 
 const eraseBtn = document.getElementById("eraseBtn");
 const createPaletteBtn = document.getElementById("createPalette");
@@ -40,17 +40,11 @@ const toggleGridCheckbox = document.getElementById("toggleGrid");
 
 const modeSelect = document.getElementById("modeSelect");
 const displayEl = document.getElementById("display");
-const tileSize = 16; // size of each tile
 
-const tool = new DrawingTool(cm, colorPicker, modeSelect, displayEl, tileSize);
 
-fileInput.addEventListener("change", (e) => {
-	const file = e.target.files[ 0 ];
-	if (!file) return;
-	const img = new Image();
-	img.onload = () => cm.loadImage(img);
-	img.src = URL.createObjectURL(file);
-});
+const tool = new DrawingTool(cm, colorPicker, modeSelect, displayEl);
+
+
 
 // TODO add this into palette and if no selected add new swatch on change
 // colorPicker.addEventListener("input", () =>
@@ -61,10 +55,10 @@ eraseBtn.addEventListener("click", () => {
 	snapshot("Erase selected swatch");
 });
 
-// createPaletteBtn.addEventListener("click", () => {
-// 	pm.createPalette();
-// 	snapshot("Create new palette");
-// });
+createPaletteBtn.addEventListener("click", () => {
+	pm.createPalette();
+	snapshot("Create new palette");
+});
 
 colorPicker.addEventListener("input", () => {
 	const hex = colorPicker.value;
@@ -90,42 +84,53 @@ CanvasManager.prototype.loadImageAsync = function (img) {
 		requestAnimationFrame(() => resolve());
 	});
 };
-// Trigger hidden file input when button clicked
-document.getElementById("load-raw-image").addEventListener("click", () => {
-	document.getElementById("raw-image-input").click();
+const fileInput = document.getElementById("raw-image-input");
+
+fileInput.addEventListener("change", (e) => {
+	const file = e.target.files[ 0 ];
+	if (!file) return;
+
+	const img = new Image();
+	img.src = URL.createObjectURL(file);
+
+	img.onload = async () => {
+		await cm.loadImageAsync(img);  // load into your canvas manager
+		document.getElementById("quantize-tile-btn").disabled = false;
+		snapshot();  // your function to capture the state
+
+		// Reset input so you can select the same file again
+		//e.target.value = "";
+	};
 });
 
-// Existing listener for the hidden file input (your async-safe version)
-document
-	.getElementById("raw-image-input")
-	.addEventListener("change", async (e) => {
-		const file = e.target.files[ 0 ];
-		if (!file) return;
 
-		const img = new Image();
-		img.src = URL.createObjectURL(file);
+// Tile size listener
+const tileSizeInput = document.getElementById("tile-size-input");
+tileSizeInput.addEventListener("change", (e) => {
+	cm.tileSize= parseInt(e.target.value, 10) || 1;
 
-		await new Promise((resolve) => {
-			img.onload = resolve;
-		});
+	// Update your canvas manager or drawing tool here
+	// e.g., drawingTool.cm.tileSize = tileSize;
+});
 
-		await cm.loadImageAsync(img);
-		document.getElementById("quantize-tile-btn").disabled = false;
-		snapshot()
-		//e.target.value = "";
-	});
+// Color count listener
+const colorCountInput = document.getElementById("color-count-input");
+colorCountInput.addEventListener("change", (e) => {
+	cm.colorCount=  parseInt(e.target.value, 10) || 16;
+
+	// Update your palette or drawing tool here
+	// e.g., palette.updateColorCount(colorCount);
+});
+
 
 document
 	.getElementById("quantize-tile-btn")
 	.addEventListener("click", async () => {
 		if (!cm.activeLayer || !cm.rawImage) return;
-		const tileSize =
-			parseInt(document.getElementById("tile-size-input").value, 10) || 1;
-		const colorCount =
-			parseInt(document.getElementById("color-count-input").value, 10) || 16;
 
-		await cm.applyQuantizeAndTile(cm.rawImage, colorCount, tileSize);
-		snapshot(`Quantize image with ${colorCount} colors, tile size ${tileSize}`);
+
+		await cm.applyQuantizeAndTile(cm.rawImage, cm.colorCount, cm.tileSize);
+		snapshot(`Quantize image with ${cm.colorCount} colors, tile size ${cm.tileSize}`);
 		pm.createPalette()
 	});
 
@@ -195,5 +200,12 @@ document.getElementById("redoBtn").addEventListener("click", () => {
 });
 snapshot()
 
-// TODO draw not connected yet !!!!!!
-//TODO undo colorChange _> update picker
+
+const zoomInput = document.getElementById("zoom");
+const container = canvas.parentNode
+
+zoomInput.addEventListener("input", () => {
+	const scale = parseFloat(zoomInput.value);
+	container.style.transform = `scale(${scale})`;
+	container.style.transformOrigin = "center center";
+});

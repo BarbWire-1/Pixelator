@@ -1,4 +1,13 @@
 import { Colors } from "./Colors.js";
+function getElementAbsolutePosition(el) {
+	let x = 0, y = 0;
+	while (el) {
+		x += el.offsetLeft - el.scrollLeft + el.clientLeft;
+		y += el.offsetTop - el.scrollTop + el.clientTop;
+		el = el.offsetParent;
+	}
+	return { left: x, top: y };
+}
 
 
 //=========================
@@ -13,6 +22,12 @@ export class PaletteManager {
 		this.selectedSwatch = null;
 
 		this.container.addEventListener("click", (e) => this.handleClick(e));
+
+
+		// this.colorPicker.addEventListener("blur", () => {
+		// 	this.colorPicker.style.display = "none";
+		// });
+
 	}
 
 	handleClick(e) {
@@ -31,6 +46,7 @@ export class PaletteManager {
 		this.selectedSwatch = null;
 		this.cm.redraw();
 		colorPicker.value = "#000000";
+
 	}
 
 	selectSwatch(swatch) {
@@ -41,14 +57,58 @@ export class PaletteManager {
 		this.cm.redraw();
 		this.cm.drawBoundingBox(swatch.pixels);
 
-		// ✅ sync the picker right here
-		const hex = this.rgbToHex(swatch.r, swatch.g, swatch.b);
-		if (this.colorPicker.value !== hex) {
-			this.colorPicker.value = hex;
-			// Optional: notify any 'change' listeners
-			this.colorPicker.dispatchEvent(new Event("change", { bubbles: true }));
+		// --- cleanup any old temp picker first ---
+		if (this.tempPicker && document.body.contains(this.tempPicker)) {
+			this.tempPicker.remove();
 		}
+
+		// Create new temporary color input
+		const tempPicker = document.createElement("input");
+		tempPicker.type = "color";
+		tempPicker.value = this.rgbToHex(swatch.r, swatch.g, swatch.b);
+		document.body.appendChild(tempPicker);
+
+		this.tempPicker = tempPicker; // keep reference
+
+		// Position exactly at swatch
+		const pos = getElementAbsolutePosition(swatch.div);
+		tempPicker.style.position = "fixed";
+		tempPicker.style.left = pos.left -5+ "px";
+		tempPicker.style.top = (pos.top -5+ "px");
+		tempPicker.type = "color";
+		tempPicker.classList.add("circle-picker");
+		tempPicker.style.zIndex = 1000;
+
+		// Update swatch color on input
+		const onInput = () => {
+			const [ r, g, b ] = tempPicker.value.match(/\w\w/g).map(h => parseInt(h, 16));
+			this.recolorSelectedSwatch(r, g, b);
+		};
+
+		// Cleanup
+		const cleanup = () => {
+			if (document.body.contains(tempPicker)) {
+				tempPicker.remove();
+			}
+			this.tempPicker = null;
+
+			tempPicker.removeEventListener("input", onInput);
+			tempPicker.removeEventListener("change", cleanup);
+			tempPicker.removeEventListener("blur", cleanup);
+		};
+
+		tempPicker.addEventListener("input", onInput);
+		tempPicker.addEventListener("change", cleanup);
+		tempPicker.addEventListener("blur", cleanup);
+
+//tempPicker.click()
 	}
+
+
+
+
+
+
 
 	// Add two helper methods in PaletteManager:
 	eraseSelectedSwatch() {
