@@ -109,8 +109,6 @@ const tileSizeInput = document.getElementById("tile-size-input");
 tileSizeInput.addEventListener("change", (e) => {
 	cm.tileSize= parseInt(e.target.value, 10) || 1;
 
-	// Update your canvas manager or drawing tool here
-	// e.g., drawingTool.cm.tileSize = tileSize;
 });
 
 // Color count listener
@@ -118,8 +116,6 @@ const colorCountInput = document.getElementById("color-count-input");
 colorCountInput.addEventListener("change", (e) => {
 	cm.colorCount=  parseInt(e.target.value, 10) || 16;
 
-	// Update your palette or drawing tool here
-	// e.g., palette.updateColorCount(colorCount);
 });
 
 
