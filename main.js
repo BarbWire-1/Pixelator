@@ -7,17 +7,15 @@ import { HistoryManager, DEBUG, debug } from "./HistoryManager.js";
 const history = new HistoryManager();
 
 
-// TODO - on swatch select click colorPicker, set position near swatch
-// TODO add range to CSS scale - check mousePos
-// TODO implement drawing correct so has acces to tiles and imagedata binding
+// TODO change the image load asp ratio to handle bigger dim as pre
 // TODO add download button
-// TODO implement history
+
 // TODO on image load, max color change clear old palette
 
-//TODO TAKING WAY TOO MANY SNAPSHOTS
-// TODO change tileSize on every change, not only on apply
 
-// TODO the mirrormode is killed - messed with tool????
+
+
+
 
 
 
