@@ -14,6 +14,9 @@ const history = new HistoryManager();
 // TODO implement history
 // TODO on image load, max color change clear old palette
 
+//TODO TAKING WAY TOO MANY SNAPSHOTS
+
+
 
 
 
