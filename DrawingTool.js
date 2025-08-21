@@ -1,6 +1,8 @@
 // TODO diagonal is funny!!!!!
 // TODO check relation layer/canvas/textOverflow: // TODO update imageData after draw/erase to not loose on swatch usage
+// TODO not working on the same page ;)
 
+import { snapshot } from "./main.js";
 export class DrawingTool {
 	constructor (canvas, colorPicker, modeSelect, displayEl, tileSize = 16) {
 		this.canvas = canvas;
@@ -36,6 +38,7 @@ export class DrawingTool {
 			};
 			this.isEraser = false;
 			this.updateDisplay();
+			snapshot()
 		});
 
 		this.modeSelect.addEventListener("change", e => {
@@ -82,6 +85,7 @@ export class DrawingTool {
 		if (!this.drawing) return;
 		this.drawing = false;
 		this.start = null;
+		snapshot()
 	}
 
 	drawLine(p0, p1) {

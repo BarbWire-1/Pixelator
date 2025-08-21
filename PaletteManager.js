@@ -1,5 +1,6 @@
 import { Colors } from "./Colors.js";
 
+
 //=========================
 // PALETTE MANAGER
 //=========================
@@ -78,8 +79,7 @@ export class PaletteManager {
 
 	createPalette() {
 		if (!this.cm.activeLayer) return;
-		this.container.innerHTML = "";
-		this.swatches = [];
+		this.clear();
 
 		const data = this.cm.activeLayer.imageData.data;
 		const colorMap = {};
@@ -120,12 +120,90 @@ export class PaletteManager {
 			});
 		});
 	}
+	addColorSwatch() {
 
+	}
 
+	clear() {
+		this.container.innerHTML = "";
+		this.swatches = [];
+}
 	rgbToHex(r, g, b) {
 		return (
 			"#" +
 			[ r, g, b ].map((x) => x.toString(16).padStart(2, "0")).join("")
 		);
 	}
+	// =========================
+	// HISTORY SUPPORT
+	// =========================
+
+	// Return a serializable palette state
+	getPaletteState() {
+		return this.swatches.map(s => ({
+			r: s.r,
+			g: s.g,
+			b: s.b,
+			// optional: store pixel indices if you want to re-bind exactly
+			pixels: s.pixels.map(p => p.index),
+			selected: this.selectedSwatch === s
+		}));
+	}
+
+	// Restore a palette from saved state
+	setPaletteState(state) {
+		this.clear();
+
+		// First add the deselect swatch
+		const deselectDiv = document.createElement("div");
+		deselectDiv.className = "swatch deselect";
+		deselectDiv.title = "Deselect";
+		this.container.appendChild(deselectDiv);
+
+		state.forEach(({ r, g, b, pixels, selected }) => {
+			const div = document.createElement("div");
+			div.className = "swatch";
+			div.style.backgroundColor = `rgb(${r},${g},${b})`;
+			this.container.appendChild(div);
+
+			const swatch = {
+				r,
+				g,
+				b,
+				pixels: pixels.map(idx => ({ index: idx })), // rebuild pixel refs
+				div
+			};
+			this.swatches.push(swatch);
+
+			if (selected) {
+				this.selectSwatch(swatch);
+			}
+		});
+	}
+
+	// Return currently selected swatch’s color (or null)
+	getSelectedColor() {
+		if (!this.selectedSwatch) return null;
+		return {
+			r: this.selectedSwatch.r,
+			g: this.selectedSwatch.g,
+			b: this.selectedSwatch.b
+		};
+	}
+
+	// Restore selection by matching color
+	setSelectedColor(color) {
+		if (!color) {
+			this.deselectSwatch();
+			return;
+		}
+		const swatch = this.swatches.find(
+			s => s.r === color.r && s.g === color.g && s.b === color.b
+		);
+		if (swatch) {
+			this.selectSwatch(swatch);
+		}
+	}
+
+
 }

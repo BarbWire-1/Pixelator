@@ -14,7 +14,8 @@ class Layer {
 }
 
 
-
+// TODO seems a bit odd with layers.... drawing not integrated.
+// TODO add layering stack!
 //=========================
 // CANVAS MANAGER
 //=========================
