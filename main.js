@@ -203,5 +203,5 @@ const container = canvas.parentNode
 zoomInput.addEventListener("change", () => {
 	const scale = parseFloat(zoomInput.value);
 	container.style.transform = `scale(${scale})`;
-	container.style.transformOrigin = "top left";
+	container.style.transformOrigin = "center center";
 });
