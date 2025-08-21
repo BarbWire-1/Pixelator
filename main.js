@@ -15,6 +15,9 @@ const history = new HistoryManager();
 // TODO on image load, max color change clear old palette
 
 //TODO TAKING WAY TOO MANY SNAPSHOTS
+// TODO change tileSize on every change, not only on apply
+
+// TODO the mirrormode is killed - messed with tool????
 
 
 
@@ -35,6 +38,12 @@ const eraseBtn = document.getElementById("eraseBtn");
 const createPaletteBtn = document.getElementById("createPalette");
 const toggleGridCheckbox = document.getElementById("toggleGrid");
 
+const modeSelect = document.getElementById("modeSelect");
+const displayEl = document.getElementById("display");
+const tileSize = 16; // size of each tile
+
+const tool = new DrawingTool(cm, colorPicker, modeSelect, displayEl, tileSize);
+
 fileInput.addEventListener("change", (e) => {
 	const file = e.target.files[ 0 ];
 	if (!file) return;
@@ -52,10 +61,10 @@ eraseBtn.addEventListener("click", () => {
 	snapshot("Erase selected swatch");
 });
 
-createPaletteBtn.addEventListener("click", () => {
-	pm.createPalette();
-	snapshot("Create new palette");
-});
+// createPaletteBtn.addEventListener("click", () => {
+// 	pm.createPalette();
+// 	snapshot("Create new palette");
+// });
 
 colorPicker.addEventListener("input", () => {
 	const hex = colorPicker.value;
@@ -117,12 +126,9 @@ document
 
 		await cm.applyQuantizeAndTile(cm.rawImage, colorCount, tileSize);
 		snapshot(`Quantize image with ${colorCount} colors, tile size ${tileSize}`);
+		pm.createPalette()
 	});
-const modeSelect = document.getElementById("modeSelect");
-const displayEl = document.getElementById("display");
-const tileSize = 16; // size of each tile
 
-const tool = new DrawingTool(canvas, colorPicker, modeSelect, displayEl, tileSize);
 
 // Brush / Eraser toggle
 document.querySelectorAll('input[name="toolMode"]').forEach(radio => {

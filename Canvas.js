@@ -33,12 +33,18 @@ export class CanvasManager {
 	async loadImage(img) {
 		this.rawImage = img;
 		const container = document.getElementById("canvas-container");
+
+		// Compute ratio and target dimensions
 		const ratio = Math.min(
 			container.clientWidth / img.width,
 			container.clientHeight / img.height
 		);
 		const targetW = Math.round(img.width * ratio);
 		const targetH = Math.round(img.height * ratio);
+
+		// Store once for later use
+		this.dimensions = { width: targetW, height: targetH, ratio };
+
 		this.resizeCanvas(targetW, targetH);
 
 		this.ctx.imageSmoothingEnabled = false;
@@ -53,6 +59,7 @@ export class CanvasManager {
 
 		this.redraw();
 	}
+
 
 	resizeCanvas(width, height) {
 		this.canvas.width = width;
@@ -90,88 +97,87 @@ export class CanvasManager {
 		}
 	}
 
+	/*
+Changed approach:
+1. Downscale the image according to the intended tile size for quantization.
+2. Quantize colors on the downscaled image.
+3. Upscale the quantized result to the canvas dimensions while preserving aspect ratio.
+4. Set pixels directly in the final canvas-sized layer for ultra-fast drawing.
+*/
+
 
 	async applyQuantizeAndTile(img, colorCount = 16, tileSize = 10) {
-		if (!img) return;
+		if (!img || !this.dimensions) return;
+
 		this.tileSize = tileSize;
+		const { width: canvasW, height: canvasH } = this.dimensions;
 
-		const rgbPalette = await Colors.kMeansQuantize(img, colorCount);
-		const layer = new Layer(
-			this.canvas.width,
-			this.canvas.height,
-			`Layer ${this.layers.length}`
-		);
-		this.drawTiled(layer, img, tileSize, rgbPalette);
+		// -----------------------------
+		// STEP 1: Downscale to tile grid size
+		// -----------------------------
+		const tempWidth = Math.ceil(canvasW / tileSize);
+		const tempHeight = Math.ceil(canvasH / tileSize);
 
-		this.layers.push(layer);
-		this.activeLayer = layer;
-
-		this.redraw();
-		return rgbPalette;
-	}
-	//  Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently
-	// THIS IS AWFULLY HEAVY
-	drawTiled(layer, img, tileSize = 20, palette = null) {
-		// Draw raw image to temp canvas
 		const tempCanvas = document.createElement("canvas");
-		tempCanvas.width = layer.width;
-		tempCanvas.height = layer.height;
+		tempCanvas.width = tempWidth;
+		tempCanvas.height = tempHeight;
 		const tctx = tempCanvas.getContext("2d");
 		tctx.imageSmoothingEnabled = false;
-		tctx.drawImage(img, 0, 0, layer.width, layer.height);
 
-		// ✅ Store raw pixel data ONCE
-		layer.rawPixelData = tctx.getImageData(0, 0, layer.width, layer.height).data;
+		// Draw image scaled to tile grid
+		tctx.drawImage(img, 0, 0, tempWidth, tempHeight);
 
-		// Create output ImageData
-		const outputImageData = tctx.createImageData(layer.width, layer.height);
-		const outData = outputImageData.data;
+		// -----------------------------
+		// STEP 2: Quantize
+		// -----------------------------
+		const { palette, clusteredData } = await Colors.kMeansQuantize(tempCanvas, colorCount);
 
-		for (let y = 0; y < layer.height; y += tileSize) {
-			for (let x = 0; x < layer.width; x += tileSize) {
-				const idx = (y * layer.width + x) * 4;
-				let color = [
-					layer.rawPixelData[ idx ],
-					layer.rawPixelData[ idx + 1 ],
-					layer.rawPixelData[ idx + 2 ],
-					layer.rawPixelData[ idx + 3 ]
-				];
+		// -----------------------------
+		// STEP 3: Create full-size layer
+		// -----------------------------
+		const layer = new Layer(canvasW, canvasH, `Layer ${this.layers.length}`);
+		const outData = layer.imageData.data;
 
-				if (palette) color = this.findClosestColor(color, palette);
+		// -----------------------------
+		// STEP 4: Upscale tiles to canvas size
+		// -----------------------------
+		for (let y = 0; y < tempHeight; y++) {
+			for (let x = 0; x < tempWidth; x++) {
+				const i = (y * tempWidth + x) * 4;
+				const r = clusteredData[ i ];
+				const g = clusteredData[ i + 1 ];
+				const b = clusteredData[ i + 2 ];
+				const a = clusteredData[ i + 3 ];
 
-				const w = Math.min(tileSize, layer.width - x);
-				const h = Math.min(tileSize, layer.height - y);
+				// Compute exact position on full canvas
+				const startX = x * tileSize;
+				const startY = y * tileSize;
+				const tileW = Math.min(tileSize, canvasW - startX);
+				const tileH = Math.min(tileSize, canvasH - startY);
 
-				for (let ty = 0; ty < h; ty++) {
-					for (let tx = 0; tx < w; tx++) {
-						const outIdx = ((y + ty) * layer.width + (x + tx)) * 4;
-						outData[ outIdx ] = color[ 0 ];
-						outData[ outIdx + 1 ] = color[ 1 ];
-						outData[ outIdx + 2 ] = color[ 2 ];
-						outData[ outIdx + 3 ] = color[ 3 ];
+				for (let ty = 0; ty < tileH; ty++) {
+					for (let tx = 0; tx < tileW; tx++) {
+						const px = ((startY + ty) * canvasW + (startX + tx)) * 4;
+						outData[ px ] = r;
+						outData[ px + 1 ] = g;
+						outData[ px + 2 ] = b;
+						outData[ px + 3 ] = a;
 					}
 				}
 			}
 		}
 
-		layer.imageData = outputImageData;
+		// -----------------------------
+		// STEP 5: Push layer & redraw
+		// -----------------------------
+		this.layers.push(layer);
+		this.activeLayer = layer;
+		this.redraw();
+
+		return palette;
 	}
 
-	findClosestColor(px, palette) {
-		let minDist = Infinity;
-		let closest = px;
-		for (const c of palette) {
-			const d =
-				(px[ 0 ] - c[ 0 ]) ** 2 +
-				(px[ 1 ] - c[ 1 ]) ** 2 +
-				(px[ 2 ] - c[ 2 ]) ** 2;
-			if (d < minDist) {
-				minDist = d;
-				closest = c;
-			}
-		}
-		return [ ...closest, px[ 3 ] ];
-	}
+
 
 	erasePixels(pixels) {
 		if (!this.activeLayer) return;
@@ -209,7 +215,7 @@ export class CanvasManager {
 		});
 		this.ctx.strokeStyle = color;
 		this.ctx.lineWidth = 2;
-		//this.ctx.setLineDash([ 6, 4 ]);
+
 		this.ctx.strokeRect(
 			minX - 0.5,
 			minY - 0.5,

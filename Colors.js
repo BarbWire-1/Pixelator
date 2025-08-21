@@ -239,7 +239,7 @@ export class Colors {
 	// =======================
 // KMEANS COLOR QUANTIZATION
 // =======================
-static kMeansQuantize(img, k = 16) {
+static kMeansQuantizeOLD(img, k = 16) {
 	const tempCanvas = document.createElement("canvas");
 	tempCanvas.width = img.width;
 	tempCanvas.height = img.height;
@@ -288,5 +288,80 @@ static kMeansQuantize(img, k = 16) {
 	}
 	return palette;
 }
+
+	static kMeansQuantize(img, k = 16) {
+		const tempCanvas = document.createElement("canvas");
+		tempCanvas.width = img.width;
+		tempCanvas.height = img.height;
+		const ctx = tempCanvas.getContext("2d");
+		ctx.drawImage(img, 0, 0);
+
+		const data = ctx.getImageData(0, 0, img.width, img.height);
+		const pixels = [];
+		for (let i = 0; i < data.data.length; i += 4) {
+			pixels.push([ data.data[ i ], data.data[ i + 1 ], data.data[ i + 2 ] ]);
+		}
+
+		// initialize palette
+		let palette = [];
+		for (let i = 0; i < k; i++) {
+			palette.push(pixels[ Math.floor(Math.random() * pixels.length) ]);
+		}
+
+		for (let iter = 0; iter < 5; iter++) {
+			const clusters = Array.from({ length: k }, () => []);
+			for (const px of pixels) {
+				let best = 0, bestDist = Infinity;
+				for (let i = 0; i < palette.length; i++) {
+					const c = palette[ i ];
+					const d =
+						(px[ 0 ] - c[ 0 ]) ** 2 +
+						(px[ 1 ] - c[ 1 ]) ** 2 +
+						(px[ 2 ] - c[ 2 ]) ** 2;
+					if (d < bestDist) {
+						bestDist = d;
+						best = i;
+					}
+				}
+				clusters[ best ].push(px);
+			}
+
+			for (let i = 0; i < k; i++) {
+				if (!clusters[ i ].length) continue;
+				const sum = [ 0, 0, 0 ];
+				clusters[ i ].forEach(p => {
+					sum[ 0 ] += p[ 0 ];
+					sum[ 1 ] += p[ 1 ];
+					sum[ 2 ] += p[ 2 ];
+				});
+				palette[ i ] = sum.map(v => Math.round(v / clusters[ i ].length));
+			}
+		}
+
+		// map original pixels to nearest centroid
+		const clusteredData = new Uint8ClampedArray(data.data.length);
+		for (let i = 0; i < pixels.length; i++) {
+			const px = pixels[ i ];
+			let best = 0, bestDist = Infinity;
+			for (let j = 0; j < palette.length; j++) {
+				const c = palette[ j ];
+				const d =
+					(px[ 0 ] - c[ 0 ]) ** 2 +
+					(px[ 1 ] - c[ 1 ]) ** 2 +
+					(px[ 2 ] - c[ 2 ]) ** 2;
+				if (d < bestDist) {
+					bestDist = d;
+					best = j;
+				}
+			}
+			clusteredData[ i * 4 ] = palette[ best ][ 0 ];
+			clusteredData[ i * 4 + 1 ] = palette[ best ][ 1 ];
+			clusteredData[ i * 4 + 2 ] = palette[ best ][ 2 ];
+			clusteredData[ i * 4 + 3 ] = data.data[ i * 4 + 3 ]; // keep alpha
+		}
+
+		return { palette, clusteredData };
+	}
+
 
 }

@@ -1,16 +1,20 @@
 // TODO diagonal is funny!!!!!
-// TODO check relation layer/canvas/textOverflow: // TODO update imageData after draw/erase to not loose on swatch usage
+
 // TODO not working on the same page ;)
+
+// TODO FUCKING ERASER DRAWS BLACK
+// TODO FUCKING MODE IS BROKEN
 
 import { snapshot } from "./main.js";
 export class DrawingTool {
-	constructor (canvas, colorPicker, modeSelect, displayEl, tileSize = 16) {
-		this.canvas = canvas;
-		this.ctx = canvas.getContext("2d");
+	constructor (canvasManager, colorPicker, modeSelect, displayEl) {
+		this.cm = canvasManager; // store reference to CanvasManager
+		this.canvas = canvasManager.canvas;
+		this.ctx = canvasManager.ctx;
 		this.colorPicker = colorPicker;
 		this.modeSelect = modeSelect;
 		this.displayEl = displayEl;
-		this.tileSize = tileSize;
+		this.tileSize = this.cm.tileSize;
 
 		this.drawing = false;
 		this.start = null;
@@ -23,28 +27,21 @@ export class DrawingTool {
 		this.updateDisplay();
 	}
 
+
 	bindEvents() {
 		this.canvas.addEventListener("mousedown", e => this.startDraw(e));
 		this.canvas.addEventListener("mousemove", e => this.drawMove(e));
 		this.canvas.addEventListener("mouseup", e => this.endDraw(e));
 		this.canvas.addEventListener("mouseleave", e => this.endDraw(e));
 
-		this.colorPicker.addEventListener("input", e => {
-			const hex = e.target.value;
-			this.currentColor = {
-				r: parseInt(hex.substr(1, 2), 16),
-				g: parseInt(hex.substr(3, 2), 16),
-				b: parseInt(hex.substr(5, 2), 16),
-			};
-			this.isEraser = false;
-			this.updateDisplay();
-			snapshot()
-		});
+		if (this.modeSelect) {
+			this.modeSelect.addEventListener("change", () => {
+				this.mode = this.modeSelect.value;
+				this.updateDisplay();
+			});
+		}
 
-		this.modeSelect.addEventListener("change", e => {
-			this.mode = e.target.value;
-			this.updateDisplay();
-		});
+
 	}
 
 	updateDisplay() {
@@ -53,8 +50,8 @@ export class DrawingTool {
 
 	getMouseTile(e) {
 		const rect = this.canvas.getBoundingClientRect();
-		const x = Math.floor((e.clientX - rect.left) / this.tileSize);
-		const y = Math.floor((e.clientY - rect.top) / this.tileSize);
+		const x = Math.floor((e.clientX - rect.left) / this.cm.tileSize);
+		const y = Math.floor((e.clientY - rect.top) / this.cm.tileSize);
 		return { x, y };
 	}
 
@@ -85,7 +82,7 @@ export class DrawingTool {
 		if (!this.drawing) return;
 		this.drawing = false;
 		this.start = null;
-		snapshot()
+		snapshot("Draw"); // record the completed stroke
 	}
 
 	drawLine(p0, p1) {
@@ -112,34 +109,66 @@ export class DrawingTool {
 	}
 
 	applyTile(tx, ty) {
-		const size = this.tileSize;
-		const colors = this.isEraser ? { r: 255, g: 255, b: 255 } : this.currentColor;
+		if (!this.cm.activeLayer) return;
+		const layer = this.cm.activeLayer;
+		const data = layer.imageData.data;
+		const size = this.cm.tileSize;
 
-		// Draw main tile
-		this.ctx.fillStyle = `rgb(${colors.r},${colors.g},${colors.b})`;
-		this.ctx.fillRect(tx * size, ty * size, size, size);
+		const wTiles = Math.floor(layer.width / size);
+		const hTiles = Math.floor(layer.height / size);
 
-		// Apply mirrored modes
-		const w = Math.floor(this.canvas.width / size);
-		const h = Math.floor(this.canvas.height / size);
+		const setPixel = (x, y, color, alpha = 255) => {
+			if (x < 0 || x >= layer.width || y < 0 || y >= layer.height) return;
+			const idx = (y * layer.width + x) * 4;
+			data[ idx ] = color.r;
+			data[ idx + 1 ] = color.g;
+			data[ idx + 2 ] = color.b;
+			data[ idx + 3 ] = alpha;
+		};
+
+		const color = this.isEraser ? { r: 0, g: 0, b: 0 } : this.currentColor;
+		const alpha = this.isEraser ? 0 : 255;
+
+		// Fill main tile
+		for (let y = 0; y < size; y++) {
+			for (let x = 0; x < size; x++) {
+				setPixel(tx * size + x, ty * size + y, color, alpha);
+			}
+		}
+
+		
+		const mirrors = [];
 
 		switch (this.mode) {
 			case "H":
-				this.ctx.fillRect((w - tx - 1) * size, ty * size, size, size);
+				mirrors.push({ tx, ty: hTiles - ty - 1 });
 				break;
 			case "V":
-				this.ctx.fillRect(tx * size, (h - ty - 1) * size, size, size);
+				mirrors.push({ tx: wTiles - tx - 1, ty });
 				break;
 			case "B":
-				this.ctx.fillRect((w - tx - 1) * size, ty * size, size, size);
-				this.ctx.fillRect(tx * size, (h - ty - 1) * size, size, size);
-				this.ctx.fillRect((w - tx - 1) * size, (h - ty - 1) * size, size, size);
+				mirrors.push({ tx, ty: hTiles - ty - 1 });             // horizontal
+				mirrors.push({ tx: wTiles - tx - 1, ty });             // vertical
+				mirrors.push({ tx: wTiles - tx - 1, ty: hTiles - ty - 1 }); // both
 				break;
 			case "D":
-				this.ctx.fillRect(ty * size, tx * size, size, size);
+				mirrors.push({ tx: wTiles - tx - 1, ty: hTiles - ty - 1 });; // diagonal swap
 				break;
 		}
+		// Apply mirrored tiles
+		mirrors.forEach(({ tx, ty }) => {
+			for (let y = 0; y < size; y++) {
+				for (let x = 0; x < size; x++) {
+					setPixel(tx * size + x, ty * size + y, color, alpha);
+				}
+			}
+		});
+
+		this.cm.redraw();
 	}
+
+
+
 
 	setEraser() {
 		this.isEraser = true;
