@@ -5,77 +5,100 @@
 	// then map all original pixels to the nearest centroid.
 	// This makes it MUCH faster while preserving overall color fidelity.
 
-	export  function kMeansQuantize(img, k = 16, iterations = 10) {
+export function kMeansQuantize(img, k = 16, iterations = 10) {
+	// Draw image to temp canvas and get pixel data
 	const tempCanvas = document.createElement("canvas");
 	tempCanvas.width = img.width;
 	tempCanvas.height = img.height;
 	const ctx = tempCanvas.getContext("2d");
 	ctx.drawImage(img, 0, 0);
-	console.log(iterations)
 	const data = ctx.getImageData(0, 0, img.width, img.height);
-	const pixels = [];
+	const pixels = new Uint8Array(img.width * img.height * 3); // flat RGB array
 	const uniqueColors = new Set();
 
+	// Fill pixels array and track unique colors using 24-bit keys
+	let pIndex = 0;
 	for (let i = 0; i < data.data.length; i += 4) {
 		const r = data.data[ i ], g = data.data[ i + 1 ], b = data.data[ i + 2 ];
-		pixels.push([ r, g, b ]);
-		uniqueColors.add(`${r},${g},${b}`);
+		pixels[ pIndex++ ] = r;
+		pixels[ pIndex++ ] = g;
+		pixels[ pIndex++ ] = b;
+		uniqueColors.add((r << 16) | (g << 8) | b);
 	}
 
-	// Clamp k to number of unique colors
 	const actualK = Math.min(k, uniqueColors.size);
 
-	// initialize palette randomly
-	let palette = [];
-	const used = new Set();
+	// Initialize palette randomly from unique pixels
+	const palette = [];
+	const usedKeys = new Set();
 	while (palette.length < actualK) {
-		const px = pixels[ Math.floor(Math.random() * pixels.length) ];
-		const key = px.join(",");
-		if (!used.has(key)) {
-			palette.push(px.slice());
-			used.add(key);
+		const idx = Math.floor(Math.random() * (pixels.length / 3)) * 3;
+		const key = (pixels[ idx ] << 16) | (pixels[ idx + 1 ] << 8) | pixels[ idx + 2 ];
+		if (!usedKeys.has(key)) {
+			palette.push([ pixels[ idx ], pixels[ idx + 1 ], pixels[ idx + 2 ] ]);
+			usedKeys.add(key);
 		}
 	}
 
-	// k-means iterations
+	// Preallocate clusters for reuse
+	const clusters = Array.from({ length: actualK }, () => []);
+	const clusterSums = Array.from({ length: actualK }, () => [ 0, 0, 0 ]);
+
+	// K-means iterations
 	for (let iter = 0; iter < iterations; iter++) {
-
-		console.log(`kMeans iteration: ${iter + 1}`);
-
-		const clusters = Array.from({ length: actualK }, () => []);
-		for (const px of pixels) {
-			let best = 0, bestDist = Infinity;
-			for (let i = 0; i < palette.length; i++) {
-				const c = palette[ i ];
-				const d = (px[ 0 ] - c[ 0 ]) ** 2 + (px[ 1 ] - c[ 1 ]) ** 2 + (px[ 2 ] - c[ 2 ]) ** 2;
-				if (d < bestDist) { bestDist = d; best = i; }
-			}
-			clusters[ best ].push(px);
+		// Clear clusters and sums
+		for (let c = 0; c < actualK; c++) {
+			clusters[ c ].length = 0;
+			clusterSums[ c ][ 0 ] = clusterSums[ c ][ 1 ] = clusterSums[ c ][ 2 ] = 0;
 		}
-		for (let i = 0; i < actualK; i++) {
-			if (!clusters[ i ].length) continue;
-			const sum = [ 0, 0, 0 ];
-			clusters[ i ].forEach(p => { sum[ 0 ] += p[ 0 ]; sum[ 1 ] += p[ 1 ]; sum[ 2 ] += p[ 2 ]; });
-			palette[ i ] = sum.map(v => Math.round(v / clusters[ i ].length));
+
+		// Assign each pixel to nearest centroid
+		for (let i = 0; i < pixels.length; i += 3) {
+			const pr = pixels[ i ], pg = pixels[ i + 1 ], pb = pixels[ i + 2 ];
+			let best = 0, bestDist = Infinity;
+
+			for (let j = 0; j < actualK; j++) {
+				const c = palette[ j ];
+				const dr = pr - c[ 0 ], dg = pg - c[ 1 ], db = pb - c[ 2 ];
+				const d = dr * dr + dg * dg + db * db;
+				if (d < bestDist) { bestDist = d; best = j; }
+			}
+
+			clusters[ best ].push(i);
+			clusterSums[ best ][ 0 ] += pr;
+			clusterSums[ best ][ 1 ] += pg;
+			clusterSums[ best ][ 2 ] += pb;
+		}
+
+		// Update centroids
+		for (let j = 0; j < actualK; j++) {
+			const cluster = clusters[ j ];
+			if (!cluster.length) continue;
+			palette[ j ][ 0 ] = Math.round(clusterSums[ j ][ 0 ] / cluster.length);
+			palette[ j ][ 1 ] = Math.round(clusterSums[ j ][ 1 ] / cluster.length);
+			palette[ j ][ 2 ] = Math.round(clusterSums[ j ][ 2 ] / cluster.length);
 		}
 	}
 
-	// map pixels to centroids
+	// Map all pixels to nearest centroid
 	const clusteredData = new Uint8ClampedArray(data.data.length);
-	for (let i = 0; i < pixels.length; i++) {
-		const px = pixels[ i ];
+	for (let i = 0; i < pixels.length; i += 3) {
+		const pr = pixels[ i ], pg = pixels[ i + 1 ], pb = pixels[ i + 2 ];
 		let best = 0, bestDist = Infinity;
-		for (let j = 0; j < palette.length; j++) {
+
+		for (let j = 0; j < actualK; j++) {
 			const c = palette[ j ];
-			const d = (px[ 0 ] - c[ 0 ]) ** 2 + (px[ 1 ] - c[ 1 ]) ** 2 + (px[ 2 ] - c[ 2 ]) ** 2;
+			const dr = pr - c[ 0 ], dg = pg - c[ 1 ], db = pb - c[ 2 ];
+			const d = dr * dr + dg * dg + db * db;
 			if (d < bestDist) { bestDist = d; best = j; }
 		}
-		clusteredData[ i * 4 ] = palette[ best ][ 0 ];
-		clusteredData[ i * 4 + 1 ] = palette[ best ][ 1 ];
-		clusteredData[ i * 4 + 2 ] = palette[ best ][ 2 ];
-		clusteredData[ i * 4 + 3 ] = data.data[ i * 4 + 3 ];
-	}
 
+		const outIdx = (i / 3) * 4;
+		clusteredData[ outIdx ] = palette[ best ][ 0 ];
+		clusteredData[ outIdx + 1 ] = palette[ best ][ 1 ];
+		clusteredData[ outIdx + 2 ] = palette[ best ][ 2 ];
+		clusteredData[ outIdx + 3 ] = data.data[ outIdx + 3 ]; // preserve alpha
+	}
 
 	return { palette, clusteredData, uniqueCount: uniqueColors.size };
 }

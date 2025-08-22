@@ -156,30 +156,43 @@ export class CanvasManager {
 		const layer = new Layer(canvasW, canvasH, `Layer ${this.layers.length}`);
 		const outData = layer.imageData.data;
 
-		for (let y = 0; y < tempHeight; y++) {
-			for (let x = 0; x < tempWidth; x++) {
-				const i = (y * tempWidth + x) * 4;
-				const r = clusteredData[ i ];
-				const g = clusteredData[ i + 1 ];
-				const b = clusteredData[ i + 2 ];
-				const a = clusteredData[ i + 3 ];
+		if (tileSize === 1) {
+			// Direct copy for pixel-per-pixel
+			outData.set(clusteredData);
+		} else {
+			// Existing tile-based upscale
+			const cw = canvasW, ch = canvasH, ts = tileSize;
+			const tempW = tempWidth, tempH = tempHeight;
+			const data = outData;
+			const clustered = clusteredData;
 
-				const startX = x * tileSize;
-				const startY = y * tileSize;
-				const tileW = Math.min(tileSize, canvasW - startX);
-				const tileH = Math.min(tileSize, canvasH - startY);
+			for (let y = 0; y < tempH; y++) {
+				const startY = y * ts;
+				const tileH = Math.min(ts, ch - startY);
 
-				for (let ty = 0; ty < tileH; ty++) {
-					for (let tx = 0; tx < tileW; tx++) {
-						const px = ((startY + ty) * canvasW + (startX + tx)) * 4;
-						outData[ px ] = r;
-						outData[ px + 1 ] = g;
-						outData[ px + 2 ] = b;
-						outData[ px + 3 ] = a;
+				for (let x = 0; x < tempW; x++) {
+					const i = (y * tempW + x) * 4;
+					const r = clustered[ i ];
+					const g = clustered[ i + 1 ];
+					const b = clustered[ i + 2 ];
+					const a = clustered[ i + 3 ];
+
+					const startX = x * ts;
+					const tileW = Math.min(ts, cw - startX);
+
+					for (let ty = 0; ty < tileH; ty++) {
+						let rowIndex = ((startY + ty) * cw + startX) * 4;
+						for (let tx = 0; tx < tileW; tx++, rowIndex += 4) {
+							data[ rowIndex ] = r;
+							data[ rowIndex + 1 ] = g;
+							data[ rowIndex + 2 ] = b;
+							data[ rowIndex + 3 ] = a;
+						}
 					}
 				}
 			}
 		}
+
 		this.log(`Step 3&4 (layer creation & upscale) done in ${(performance.now() - step3Start).toFixed(2)} ms`);
 
 		// STEP 5: Push layer & redraw
@@ -193,6 +206,7 @@ export class CanvasManager {
 
 		return palette;
 	}
+
 
 	erasePixels(pixels) {
 		if (!this.activeLayer) return;
