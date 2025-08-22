@@ -1,5 +1,5 @@
 // debug.js
-export let DEBUG = false; // toggle this anywhere at runtime
+export let DEBUG =false; // toggle this anywhere at runtime
 
 export function debug(...args) {
 	if (!DEBUG) return;

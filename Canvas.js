@@ -13,9 +13,6 @@ class Layer {
 	}
 }
 
-
-// TODO seems a bit odd with layers.... drawing not integrated.
-// TODO add layering stack!
 //=========================
 // CANVAS MANAGER
 //=========================
@@ -28,13 +25,36 @@ export class CanvasManager {
 		this.toggleGrid = false;
 		this.tileSize = 1;
 		this.rawImage = null;
+
+		this.startTime = performance.now(); // Track overall elapsed time
+		this.logEntries = []; // Store logs for UI or export
+	}
+
+	log(message) {
+		const now = performance.now();
+		const elapsed = ((now - this.startTime) / 1000).toFixed(3); // seconds
+		const entry = {
+			time: new Date().toLocaleTimeString(),
+			elapsed: parseFloat(elapsed),
+			message
+		};
+		this.logEntries.push(entry);
+		console.log(`[${entry.time} | +${entry.elapsed}s] ${message}`);
+	}
+
+	getLogs() {
+		return this.logEntries; // Retrieve the log array
+	}
+
+	clearLogs() {
+		this.logEntries = []; // Clear all stored logs
 	}
 
 	async loadImage(img) {
+		const taskStart = performance.now();
 		this.rawImage = img;
 		const container = document.getElementById("canvas-container");
 
-		// Compute ratio and target dimensions
 		const ratio = Math.min(
 			container.clientWidth / img.width,
 			container.clientHeight / img.height
@@ -42,9 +62,7 @@ export class CanvasManager {
 		const targetW = Math.round(img.width * ratio);
 		const targetH = Math.round(img.height * ratio);
 
-		// Store once for later use
 		this.dimensions = { width: targetW, height: targetH, ratio };
-
 		this.resizeCanvas(targetW, targetH);
 
 		this.ctx.imageSmoothingEnabled = false;
@@ -58,8 +76,9 @@ export class CanvasManager {
 		this.activeLayer = layer;
 
 		this.redraw();
+		this.log(`Image loaded: ${img.width}x${img.height}, scaled to ${targetW}x${targetH}`);
+		this.log(`Task "loadImage" completed in ${(performance.now() - taskStart).toFixed(2)} ms`);
 	}
-
 
 	resizeCanvas(width, height) {
 		this.canvas.width = width;
@@ -97,50 +116,37 @@ export class CanvasManager {
 		}
 	}
 
-	/*
-Changed approach:
-1. Downscale the image according to the intended tile size for quantization.
-2. Quantize colors on the downscaled image.
-3. Upscale the quantized result to the canvas dimensions while preserving aspect ratio.
-4. Set pixels directly in the final canvas-sized layer for ultra-fast drawing.
-*/
-
-
 	async applyQuantizeAndTile(img, colorCount = 16, tileSize = 10) {
+		const taskStart = performance.now();
 		if (!img || !this.dimensions) return;
 
 		this.tileSize = tileSize;
 		const { width: canvasW, height: canvasH } = this.dimensions;
 
-		// -----------------------------
-		// STEP 1: Downscale to tile grid size
-		// -----------------------------
+		this.log(`Starting quantization and tiling with colorCount=${colorCount}, tileSize=${tileSize}`);
+
+		// STEP 1: Downscale
+		const step1Start = performance.now();
 		const tempWidth = Math.ceil(canvasW / tileSize);
 		const tempHeight = Math.ceil(canvasH / tileSize);
-
 		const tempCanvas = document.createElement("canvas");
 		tempCanvas.width = tempWidth;
 		tempCanvas.height = tempHeight;
 		const tctx = tempCanvas.getContext("2d");
 		tctx.imageSmoothingEnabled = false;
-
-		// Draw image scaled to tile grid
 		tctx.drawImage(img, 0, 0, tempWidth, tempHeight);
+		this.log(`Step 1 (downscale) done in ${(performance.now() - step1Start).toFixed(2)} ms`);
 
-		// -----------------------------
 		// STEP 2: Quantize
-		// -----------------------------
+		const step2Start = performance.now();
 		const { palette, clusteredData } = await Colors.kMeansQuantize(tempCanvas, colorCount);
+		this.log(`Step 2 (quantize) done in ${(performance.now() - step2Start).toFixed(2)} ms`);
 
-		// -----------------------------
-		// STEP 3: Create full-size layer
-		// -----------------------------
+		// STEP 3&4: Create full-size layer and upscale
+		const step3Start = performance.now();
 		const layer = new Layer(canvasW, canvasH, `Layer ${this.layers.length}`);
 		const outData = layer.imageData.data;
 
-		// -----------------------------
-		// STEP 4: Upscale tiles to canvas size
-		// -----------------------------
 		for (let y = 0; y < tempHeight; y++) {
 			for (let x = 0; x < tempWidth; x++) {
 				const i = (y * tempWidth + x) * 4;
@@ -149,7 +155,6 @@ Changed approach:
 				const b = clusteredData[ i + 2 ];
 				const a = clusteredData[ i + 3 ];
 
-				// Compute exact position on full canvas
 				const startX = x * tileSize;
 				const startY = y * tileSize;
 				const tileW = Math.min(tileSize, canvasW - startX);
@@ -166,24 +171,26 @@ Changed approach:
 				}
 			}
 		}
+		this.log(`Step 3&4 (layer creation & upscale) done in ${(performance.now() - step3Start).toFixed(2)} ms`);
 
-		// -----------------------------
 		// STEP 5: Push layer & redraw
-		// -----------------------------
+		const step5Start = performance.now();
 		this.layers.push(layer);
 		this.activeLayer = layer;
 		this.redraw();
+		this.log(`Step 5 (push layer & redraw) done in ${(performance.now() - step5Start).toFixed(2)} ms`);
+
+		this.log(`Task "applyQuantizeAndTile" completed in ${(performance.now() - taskStart).toFixed(2)} ms`);
 
 		return palette;
 	}
-
-
 
 	erasePixels(pixels) {
 		if (!this.activeLayer) return;
 		const data = this.activeLayer.imageData.data;
 		pixels.forEach((p) => (data[ p.index + 3 ] = 0));
 		this.redraw();
+		this.log(`Erased ${pixels.length} pixels`);
 	}
 
 	recolorPixels(pixels, r, g, b) {
@@ -196,6 +203,7 @@ Changed approach:
 			data[ p.index + 3 ] = 255;
 		});
 		this.redraw();
+		this.log(`Recolored ${pixels.length} pixels to rgb(${r},${g},${b})`);
 	}
 
 	drawBoundingBox(pixels, color = "limegreen") {
@@ -215,13 +223,8 @@ Changed approach:
 		});
 		this.ctx.strokeStyle = color;
 		this.ctx.lineWidth = 2;
-
-		this.ctx.strokeRect(
-			minX - 0.5,
-			minY - 0.5,
-			maxX - minX + 1,
-			maxY - minY + 1
-		);
+		this.ctx.strokeRect(minX - 0.5, minY - 0.5, maxX - minX + 1, maxY - minY + 1);
 		this.ctx.setLineDash([]);
+		this.log(`Bounding box drawn for ${pixels.length} pixels`);
 	}
 }

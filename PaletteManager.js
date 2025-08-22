@@ -1,4 +1,5 @@
 import { Colors } from "./Colors.js";
+import { snapshot } from './main.js'
 function getElementAbsolutePosition(el) {
 	let x = 0, y = 0;
 	while (el) {
@@ -83,6 +84,7 @@ export class PaletteManager {
 		const onInput = () => {
 			const [ r, g, b ] = tempPicker.value.match(/\w\w/g).map(h => parseInt(h, 16));
 			this.recolorSelectedSwatch(r, g, b);
+			//snapshot(`recolored with ${tempPicker.value}`)
 		};
 
 		// Cleanup
@@ -90,11 +92,13 @@ export class PaletteManager {
 			if (document.body.contains(tempPicker)) {
 				tempPicker.remove();
 			}
+			snapshot(`recolored with ${tempPicker.value}`)
 			this.tempPicker = null;
 
 			tempPicker.removeEventListener("input", onInput);
 			tempPicker.removeEventListener("change", cleanup);
 			tempPicker.removeEventListener("blur", cleanup);
+
 		};
 
 		tempPicker.addEventListener("input", onInput);
