@@ -22,7 +22,7 @@ export function initPixelator() {
 		undoBtn: document.getElementById("undoBtn"),
 		redoBtn: document.getElementById("redoBtn")
 	};
-
+	const logPanel = document.getElementById("log-panel");
 	// --- Managers ---
 	const history = new HistoryManager();
 	const cm = new CanvasManager(elements.canvas);
@@ -185,7 +185,7 @@ export function initPixelator() {
 	setupUndoRedo();
 
 	// JUST spliced in to log the quantization stuff in panel
-	const logPanel = document.getElementById("log-panel");
+
 	const showLogsCheckbox = document.getElementById("show-logs-checkbox");
 
 	cm.showLogs = showLogsCheckbox.checked;
@@ -197,19 +197,27 @@ export function initPixelator() {
 	});
 
 	// Wrap logEntries with a Proxy to automatically update UI
+	// Wrap logEntries with Proxy
 	cm.logEntries = new Proxy(cm.logEntries, {
 		set(target, property, value) {
 			target[ property ] = value;
 
-			// Only handle new entries
 			if (!isNaN(property)) {
 				const entry = value;
 				if (entry && entry.message && cm.showLogs) {
 					const el = document.createElement("div");
-					el.textContent = `[${entry.time} | +${entry.elapsed}s] ${entry.message}`;
 					el.style.fontFamily = "monospace";
 					el.style.fontSize = "12px";
 					el.style.color = "limegreen";
+					el.style.whiteSpace = "pre"; // preserves all spaces and line breaks
+
+					// Split the message into lines
+					const lines = entry.message.split("\n");
+					const firstLine = `[${entry.time}] ${lines[ 0 ]}`;
+					const restLines = lines.slice(1).map(line => "    " + line); // 4 spaces indent
+
+					el.textContent = [ firstLine, ...restLines ].join("\n");
+
 					logPanel.appendChild(el);
 					logPanel.scrollTop = logPanel.scrollHeight;
 				}
@@ -217,6 +225,7 @@ export function initPixelator() {
 			return true;
 		}
 	});
+
 	snapshot("Initial state");
 
 	// Return managers in case you need them outside

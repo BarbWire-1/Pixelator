@@ -254,14 +254,21 @@ export class Colors {
 
 		const data = ctx.getImageData(0, 0, img.width, img.height);
 		const pixels = [];
+		const uniqueColors = new Set();
+
 		for (let i = 0; i < data.data.length; i += 4) {
-			pixels.push([ data.data[ i ], data.data[ i + 1 ], data.data[ i + 2 ] ]);
+			const r = data.data[ i ], g = data.data[ i + 1 ], b = data.data[ i + 2 ];
+			pixels.push([ r, g, b ]);
+			uniqueColors.add(`${r},${g},${b}`);
 		}
+
+		// Clamp k to number of unique colors
+		const actualK = Math.min(k, uniqueColors.size);
 
 		// initialize palette randomly
 		let palette = [];
 		const used = new Set();
-		while (palette.length < k) {
+		while (palette.length < actualK) {
 			const px = pixels[ Math.floor(Math.random() * pixels.length) ];
 			const key = px.join(",");
 			if (!used.has(key)) {
@@ -270,9 +277,9 @@ export class Colors {
 			}
 		}
 
+		// k-means iterations
 		for (let iter = 0; iter < iterations; iter++) {
-			const clusters = Array.from({ length: k }, () => []);
-			// assign pixels to nearest centroid
+			const clusters = Array.from({ length: actualK }, () => []);
 			for (const px of pixels) {
 				let best = 0, bestDist = Infinity;
 				for (let i = 0; i < palette.length; i++) {
@@ -282,22 +289,15 @@ export class Colors {
 				}
 				clusters[ best ].push(px);
 			}
-
-			// recompute centroids
-			for (let i = 0; i < k; i++) {
-				if (!clusters[ i ].length) {
-					// reinitialize empty cluster to a random pixel
-					const px = pixels[ Math.floor(Math.random() * pixels.length) ];
-					palette[ i ] = px.slice();
-					continue;
-				}
+			for (let i = 0; i < actualK; i++) {
+				if (!clusters[ i ].length) continue;
 				const sum = [ 0, 0, 0 ];
 				clusters[ i ].forEach(p => { sum[ 0 ] += p[ 0 ]; sum[ 1 ] += p[ 1 ]; sum[ 2 ] += p[ 2 ]; });
 				palette[ i ] = sum.map(v => Math.round(v / clusters[ i ].length));
 			}
 		}
 
-		// map original pixels to nearest centroid
+		// map pixels to centroids
 		const clusteredData = new Uint8ClampedArray(data.data.length);
 		for (let i = 0; i < pixels.length; i++) {
 			const px = pixels[ i ];
@@ -310,11 +310,13 @@ export class Colors {
 			clusteredData[ i * 4 ] = palette[ best ][ 0 ];
 			clusteredData[ i * 4 + 1 ] = palette[ best ][ 1 ];
 			clusteredData[ i * 4 + 2 ] = palette[ best ][ 2 ];
-			clusteredData[ i * 4 + 3 ] = data.data[ i * 4 + 3 ]; // preserve alpha
+			clusteredData[ i * 4 + 3 ] = data.data[ i * 4 + 3 ];
 		}
 
-		return { palette, clusteredData };
+		// ✅ return palette, clusteredData AND unique color count
+		return { palette, clusteredData, uniqueCount: uniqueColors.size };
 	}
+
 
 
 }

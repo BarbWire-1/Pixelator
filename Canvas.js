@@ -28,18 +28,22 @@ export class CanvasManager {
 
 		this.startTime = performance.now(); // Track overall elapsed time
 		this.logEntries = []; // Store logs for UI or export
+		this.showLogs = true;
 	}
 
 	log(message) {
+		if(!this.showLogs) return
 		const now = performance.now();
 		const elapsed = ((now - this.startTime) / 1000).toFixed(3); // seconds
 		const entry = {
 			time: new Date().toLocaleTimeString(),
 			elapsed: parseFloat(elapsed),
+
 			message
 		};
 		this.logEntries.push(entry);
-		console.log(`[${entry.time} | +${entry.elapsed}s] ${message}`);
+		//console.log(`[${entry.time}]  ${message}`);
+
 	}
 
 	getLogs() {
@@ -139,8 +143,10 @@ export class CanvasManager {
 
 		// STEP 2: Quantize
 		const step2Start = performance.now();
-		const { palette, clusteredData } = await Colors.kMeansQuantize(tempCanvas, colorCount);
+		const { palette, clusteredData, uniqueCount } = await Colors.kMeansQuantize(tempCanvas, colorCount);
 		this.log(`Step 2 (quantize) done in ${(performance.now() - step2Start).toFixed(2)} ms`);
+		this.log(`Unique colors found: ${uniqueCount}`);
+		this.log(`Palette length after quantization: ${palette.length}`);
 
 		// STEP 3&4: Create full-size layer and upscale
 		const step3Start = performance.now();

@@ -8,7 +8,7 @@ body {
      flex-direction: row-reverse;
      /* sidebar on the right */
      height: 100vh;
-     font-size: 1.2em;
+     font-size: 1em;
 }
 
 /* ================== Sidebar ================== */
@@ -440,4 +440,11 @@ input[type="number"] {
      white-space: pre-wrap;
      /* preserve line breaks */
 }
-* {scroll-behavior: smooth;}
+
+* {
+     scroll-behavior: smooth;
+}
+
+#log-panel {
+     white-space: pre-wrap;
+}
