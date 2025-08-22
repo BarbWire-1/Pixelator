@@ -1,4 +1,4 @@
-import { Colors } from "./Colors.js";
+import { Colors } from "../concept/Colors.js";
 import { snapshot } from './main.js'
 function getElementAbsolutePosition(el) {
 	let x = 0, y = 0;
@@ -74,8 +74,8 @@ export class PaletteManager {
 		// Position exactly at swatch
 		const pos = getElementAbsolutePosition(swatch.div);
 		tempPicker.style.position = "fixed";
-		tempPicker.style.left = pos.left -5+ "px";
-		tempPicker.style.top = (pos.top -5+ "px");
+		tempPicker.style.left = pos.left - 5 + "px";
+		tempPicker.style.top = (pos.top - 5 + "px");
 		tempPicker.type = "color";
 		tempPicker.classList.add("circle-picker");
 		tempPicker.style.zIndex = 1000;
@@ -105,7 +105,7 @@ export class PaletteManager {
 		tempPicker.addEventListener("change", cleanup);
 		tempPicker.addEventListener("blur", cleanup);
 
-//tempPicker.click()
+		//tempPicker.click()
 	}
 
 
@@ -191,7 +191,7 @@ export class PaletteManager {
 	clear() {
 		this.container.innerHTML = "";
 		this.swatches = [];
-}
+	}
 	rgbToHex(r, g, b) {
 		return (
 			"#" +

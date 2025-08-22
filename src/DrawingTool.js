@@ -1,4 +1,4 @@
-import {snapshot} from './main.js'
+import { snapshot } from './main.js'
 export class DrawingTool {
 	constructor (canvasManager, colorPicker, modeSelect, displayEl) {
 		this.cm = canvasManager; // store reference to CanvasManager

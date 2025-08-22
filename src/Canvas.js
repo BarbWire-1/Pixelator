@@ -1,4 +1,5 @@
-import { Colors } from "./Colors.js";
+import { kMeansQuantize } from "./canvaskMeans.js";
+
 
 //=========================
 // LAYER CLASS
@@ -29,10 +30,12 @@ export class CanvasManager {
 		this.startTime = performance.now(); // Track overall elapsed time
 		this.logEntries = []; // Store logs for UI or export
 		this.showLogs = true;
+
+		this.kMeansIterations = 20;
 	}
 
 	log(message) {
-		if(!this.showLogs) return
+		if (!this.showLogs) return
 		const now = performance.now();
 		const elapsed = ((now - this.startTime) / 1000).toFixed(3); // seconds
 		const entry = {
@@ -143,7 +146,7 @@ export class CanvasManager {
 
 		// STEP 2: Quantize
 		const step2Start = performance.now();
-		const { palette, clusteredData, uniqueCount } = await Colors.kMeansQuantize(tempCanvas, colorCount);
+		const { palette, clusteredData, uniqueCount } = await kMeansQuantize(tempCanvas, colorCount, this.kMeansIterations);
 		this.log(`Step 2 (quantize) done in ${(performance.now() - step2Start).toFixed(2)} ms`);
 		this.log(`Unique colors found: ${uniqueCount}`);
 		this.log(`Palette length after quantization: ${palette.length}`);

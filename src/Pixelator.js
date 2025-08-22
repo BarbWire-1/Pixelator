@@ -225,7 +225,7 @@ export function initPixelator() {
 			return true;
 		}
 	});
-
+document.getElementById('kMeans-iter').addEventListener('change', (e)=> cm.kMeansIterations = +e.target.value)
 	snapshot("Initial state");
 
 	// Return managers in case you need them outside
