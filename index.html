@@ -12,8 +12,11 @@
 </head>
 
 <body>
-     <div id="sidebar">
 
+
+     <div id="sidebar">
+<h4>Pixelation is the primary purpose.<br>Using a tileSize of 1 for full image quantization can be slow on large images.
+</h4>
           <!-- LOAD SECTION -->
           <div class="sidebar-section">
                <h3>Load</h3>
@@ -37,7 +40,7 @@
                <div class="section-content">
                     <div class="label-input">
                          <label for="kMeans-iter">kMeans Iter:</label>
-                         <input type="number" id="kMeans-iter" value="10" min="1" max="50" step="1">
+                         <input type="number" id="kMeans-iter" value="1" min="1" max="50" step="1">
                     </div>
                     <div class="label-input">
                          <label for="tile-size-input">Tile Size:</label>
@@ -104,6 +107,10 @@
                <canvas id="canvas"></canvas>
           </div>
      </div>
+
+
+
+
 
 </body>
 

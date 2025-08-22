@@ -171,9 +171,6 @@ export function initPixelator() {
 
 
 
-
-
-
 	// --- Initialize all ---
 	setupToolListeners();
 	setupPaletteListeners();
@@ -196,7 +193,7 @@ export function initPixelator() {
 		logPanel.innerHTML =''
 	});
 
-	// Wrap logEntries with a Proxy to automatically update UI
+
 	// Wrap logEntries with Proxy
 	cm.logEntries = new Proxy(cm.logEntries, {
 		set(target, property, value) {
@@ -209,12 +206,12 @@ export function initPixelator() {
 					el.style.fontFamily = "monospace";
 					el.style.fontSize = "12px";
 					el.style.color = "limegreen";
-					el.style.whiteSpace = "pre"; // preserves all spaces and line breaks
+					el.style.whiteSpace = "pre";
 
 					// Split the message into lines
 					const lines = entry.message.split("\n");
 					const firstLine = `[${entry.time}] ${lines[ 0 ]}`;
-					const restLines = lines.slice(1).map(line => "    " + line); // 4 spaces indent
+					const restLines = lines.slice(1).map(line => "    " + line); 
 
 					el.textContent = [ firstLine, ...restLines ].join("\n");
 
