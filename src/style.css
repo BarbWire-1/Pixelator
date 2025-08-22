@@ -69,6 +69,85 @@ body {
      color: #0af;
 }
 
+/* Sidebar section styling */
+.sidebar-section {
+     border-bottom: 1px solid #555;
+     margin-bottom: 8px;
+}
+
+.sidebar-section h3 {
+     cursor: pointer;
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+     padding: 5px;
+     margin: 0;
+     background: #222;
+     color: #fff;
+     font-size: 14px;
+}
+
+.sidebar-section h3::after {
+     content: "►";
+     /* Arrow */
+     font-size: 12px;
+     transition: transform 0.2s;
+}
+
+.sidebar-section.collapsed h3::after {
+     transform: rotate(90deg);
+     /* Arrow rotates when open */
+}
+
+.sidebar-section .section-content {
+     padding: 5px;
+     display: block;
+}
+
+.sidebar-section.collapsed .section-content {
+     display: none;
+}
+
+.sidebar-section h3 {
+     cursor: pointer;
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     padding: 5px;
+     margin: 0;
+     background: #222;
+     color: #fff;
+     font-size: 14px;
+}
+
+.sidebar-section h3::after {
+     content: "►";
+     font-size: 12px;
+     transition: transform 0.2s;
+}
+
+.sidebar-section.collapsed h3::after {
+     transform: rotate(90deg);
+}
+
+.section-content {
+     padding: 5px;
+     display: flex;
+     flex-direction: column;
+}
+.section-content *{
+     margin: 5px;
+}
+
+.section-content button,
+.section-content input[type="range"] {
+     width: 100%;
+}
+
+.sidebar-section.collapsed .section-content {
+     display: none;
+}
+
 #modeSelect {
      width: 100%;
      margin-bottom: 0.5rem;
