@@ -135,7 +135,8 @@ body {
      display: flex;
      flex-direction: column;
 }
-.section-content *{
+
+.section-content * {
      margin: 5px;
 }
 
@@ -526,4 +527,19 @@ input[type="number"] {
 
 #log-panel {
      white-space: pre-wrap;
+}
+
+/* BEHAVIOUR */
+/* Default collapsed state */
+.sidebar-section.collapsed .section-content {
+     display: none;
+}
+
+/* Floating dragged section */
+.sidebar-section.floating {
+     position: absolute;
+     z-index: 2000;
+     pointer-events: auto;
+     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+     transition: none;
 }
