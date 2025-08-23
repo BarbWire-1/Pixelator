@@ -19,7 +19,8 @@ Test it out:
 2. **Tile-Based Downscaling**
    - For larger tile sizes, the image is **internally downscaled** before running K-Means.
    - Each tile is assigned the nearest quantized color from the downscaled image.
-   - **Purpose:** Reduces computation while maintaining the visual structure of large tiles.
+   - **Purpose:** Reduces computation while maintaining the visual structure of large tiles. [See table here](#influence-of-tile-block-size-on-performance)
+
    - **Important:** Downscaling is **not applied** for full-resolution 1:1 requests to avoid any loss in color accuracy.
 
 3. **Single-Pass K-Means**
