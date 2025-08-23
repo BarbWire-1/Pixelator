@@ -111,7 +111,6 @@ input[type="color"].circle-picker::-moz-color-swatch {
      padding: 6px 12px;
      cursor: pointer;
      width: calc(100% - 24px)
-
 }
 
 .file-btn::file-selector-button {
@@ -434,7 +433,7 @@ input[type="number"]::-webkit-outer-spin-button {
 #canvas-wrapper {
      overflow: auto;
      width: 100%;
-   height: auto;
+     height: auto;
      display: flex;
      justify-content: center;
      /* centers wrapper horizontally */
@@ -444,10 +443,10 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 #canvas-container {
-   width: 100%;
- height: auto;
+     width: 100%;
+     height: auto;
 
-   overflow: hidden;
+     overflow: hidden;
 
 
 }
@@ -456,4 +455,23 @@ canvas {
 
      transform-origin: center center;
      /* scale relative to top-left */
+}
+
+#hexDisplay {
+     display: inline-flex;
+     align-items: center;
+     gap: 6px;
+     padding: 4px 8px;
+     border-radius: 4px;
+     background: #222;
+     color: #eee;
+     cursor: pointer;
+     user-select: none;
+     font-family: monospace;
+}
+
+#copyLabel {
+     font-size: 0.8em;
+     color: #0af;
+     font-weight: bold;
 }

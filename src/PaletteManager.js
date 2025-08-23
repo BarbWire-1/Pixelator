@@ -16,8 +16,25 @@ export class PaletteManager {
 		this.swatches = [];
 		this.selectedSwatch = null;
 
+		this.swatchTemplate = document.createElement('template');
+		this.swatchTemplate.innerHTML = `<div class="swatch"></div>`
+
 		// Handle clicks on swatches
 		this.container.addEventListener("click", (e) => this.handleClick(e));
+		const hexDisplay = document.getElementById("hexDisplay");
+		const hexValue = document.getElementById("hexValue");
+
+		hexDisplay.addEventListener("click", () => {
+			const hex = hexValue.textContent.trim();
+			navigator.clipboard.writeText(hex).then(() => {
+				// flash feedback
+				const origColor = hexDisplay.style.backgroundColor;
+				hexDisplay.style.backgroundColor = "#0af";
+				setTimeout(() => hexDisplay.style.backgroundColor = origColor, 150);
+			});
+		});
+
+
 	}
 
 	//=========================
@@ -63,19 +80,29 @@ export class PaletteManager {
 
 	addColorSwatch(colorData) {
 		const { r, g, b, pixels } = colorData;
-		const div = document.createElement("div");
-		div.className = "swatch";
+
+		// Clone the template
+		const div = this.swatchTemplate.content.firstElementChild.cloneNode(true);
+
+		// Set background color
 		div.style.backgroundColor = `rgb(${r},${g},${b})`;
+
+		// Add hex tooltip
+		div.title = `#${[ r, g, b ].map(x => x.toString(16).padStart(2, "0")).join('')}`;
+
+		// Append to container
 		this.container.appendChild(div);
 
+		// Store swatch info
 		this.swatches.push({
 			r,
 			g,
 			b,
-			pixels: pixels.map((idx) => ({ index: idx })),
+			pixels: pixels.map(idx => ({ index: idx })),
 			div
 		});
 	}
+
 
 	clearPaletteContainer() {
 		this.container.innerHTML = "";
@@ -101,12 +128,12 @@ export class PaletteManager {
 		this.selectedSwatch.div.classList.remove("selected");
 		this.selectedSwatch = null;
 		this.cm.redraw();
-		this.colorPicker.value = "#ff0000";
+		this.colorPicker.value = "#ff0000    ⎘";
 	}
 
 	selectSwatch(swatch) {
 		if (this.selectedSwatch)
-		this.selectedSwatch.div.classList.remove("selected");
+			this.selectedSwatch.div.classList.remove("selected");
 		swatch.div.classList.add("selected");
 		this.selectedSwatch = swatch;
 
@@ -115,8 +142,20 @@ export class PaletteManager {
 		this.cm.drawBoundingBox(swatch.pixels);
 
 		const { r, g, b } = swatch;
-		this.colorPicker.value = this.rgbToHex(r, g, b);
+		const hex = this.colorPicker.value = this.rgbToHex(r, g, b);
+
+		this.updateSelectedHex(hex )
+
 	}
+
+
+
+
+
+		// update the hex programmatically
+		updateHex(hex) {
+	hexValue.textContent = hex;
+}
 
 
 	getSelectedColor() {
