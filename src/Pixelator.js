@@ -23,12 +23,17 @@ export function initPixelator() {
 		redoBtn: document.getElementById("redoBtn")
 	};
 	const logPanel = document.getElementById("log-panel");
+
 	// --- Managers ---
 	const history = new HistoryManager();
 	const cm = new CanvasManager(elements.canvas);
 	const pm = new PaletteManager(cm, elements.swatchesContainer, elements.colorPicker);
 	const tool = new DrawingTool(cm, elements.colorPicker, elements.modeSelect, elements.displayEl);
-
+	document.getElementById("downloadBtn")
+		.addEventListener('click', () => {
+			console.log("clicked dl")
+			cm.downloadImage()
+		})
 	// --- Snapshot / History ---
 	function snapshot(desc = "") {
 		const state = {

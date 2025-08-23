@@ -175,6 +175,40 @@ export class CanvasManager {
 	}
 
 	// --------------------
+	// Download/export image
+	// --------------------
+	downloadImage() {
+		if (!this.activeLayer) return;
+
+		// build filename
+		const pixelated = this.tileSize > 1 ? "pixelated" : "original";
+		const colors = this.activeLayer.colors?.length ?? "full";
+		const filename = `canvas-${pixelated}-ts${this.tileSize}-c${colors}.png`;
+		// Create a temporary canvas to hold the current layer
+		const tempCanvas = document.createElement("canvas");
+		tempCanvas.width = this.activeLayer.width;
+		tempCanvas.height = this.activeLayer.height;
+		const tctx = tempCanvas.getContext("2d");
+		tctx.putImageData(this.activeLayer.imageData, 0, 0);
+
+		// Convert canvas to a blob and trigger download
+		tempCanvas.toBlob((blob) => {
+			if (!blob) return;
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			URL.revokeObjectURL(url);
+		}, "image/png");
+
+		this.log(`Image downloaded as "${filename}"`);
+	}
+
+
+	// --------------------
 	// Canvas drawing
 	// --------------------
 	resizeCanvas(width, height) {
@@ -286,6 +320,8 @@ export class CanvasManager {
 		this.log(`Step 5 (push layer & redraw) done in ${(performance.now() - step5Start).toFixed(2)} ms`);
 
 		this.log(`Task "applyQuantizeAndTile" completed in ${(performance.now() - taskStart).toFixed(2)} ms`);
+
+		layer.colors = palette;
 		return palette;
 	}
 
