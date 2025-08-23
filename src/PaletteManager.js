@@ -144,7 +144,7 @@ export class PaletteManager {
 		const { r, g, b } = swatch;
 		const hex = this.colorPicker.value = this.rgbToHex(r, g, b);
 
-		this.updateSelectedHex(hex )
+		this.updateHex(hex )
 
 	}
 
