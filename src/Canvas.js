@@ -36,7 +36,7 @@ export class CanvasManager {
 		this.kMeansIterations = 1;
 
 		this.worker = null;
-		this.colorCount = null;
+		this.colorCount =16;
 
 
 	}

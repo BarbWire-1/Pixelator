@@ -23,7 +23,7 @@ const sidebar = document.getElementById('sidebar');
 let isResizing = false;
 
 resizer.addEventListener('mousedown', (e) => {
-	e.preventDefault();
+//	e.preventDefault();
 	isResizing = true;
 	document.body.style.cursor = 'col-resize';
 });
