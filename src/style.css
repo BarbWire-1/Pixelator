@@ -468,10 +468,12 @@ canvas {
      cursor: pointer;
      user-select: none;
      font-family: monospace;
+     border: none;
 }
 
 #copyLabel {
      font-size: 0.8em;
      color: #0af;
      font-weight: bold;
+     text-align: right;
 }
