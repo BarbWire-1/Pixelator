@@ -19,7 +19,7 @@
 			offsetX = e.clientX - rect.left;
 			offsetY = e.clientY - rect.top;
 
-		
+
 			section.style.zIndex = 2000; // above sidebar
 
 			const onMouseMove = (eMove) => {
@@ -51,7 +51,7 @@
 					const sidebar = document.getElementById("sidebar");
 					const sidebarRect = sidebar.getBoundingClientRect();
 					const sectionRect = section.getBoundingClientRect();
-					const snapMargin = 50;
+					const snapMargin = 0;
 
 					const overlapX =
 						sectionRect.right > sidebarRect.left - snapMargin &&
