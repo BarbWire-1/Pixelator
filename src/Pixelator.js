@@ -1,3 +1,8 @@
+/*
+MIT License
+Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
+*/
+
 import { DrawingTool } from "./DrawingTool.js";
 import { CanvasManager } from "./Canvas.js";
 import { PaletteManager } from "./PaletteManager.js";

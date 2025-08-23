@@ -1,4 +1,7 @@
-// debug.js
+/*
+MIT License
+Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
+*/
 export let DEBUG =false; // toggle this anywhere at runtime
 
 export function debug(...args) {

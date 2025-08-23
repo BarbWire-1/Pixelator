@@ -1,3 +1,8 @@
+/*
+MIT License
+Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
+*/
+
 export class Colors {
 	static rgbToHex([ r, g, b ]) {
 		return (

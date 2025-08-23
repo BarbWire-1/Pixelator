@@ -1,5 +1,10 @@
-import {Colors} from "./Colors.js"
-// TODO test hashing colorStrings - last flawed as mac too slow
+/*
+MIT License
+Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
+*/
+
+import { Colors } from "./Colors.js"
+
 //=========================
 // PALETTE MANAGER
 //=========================

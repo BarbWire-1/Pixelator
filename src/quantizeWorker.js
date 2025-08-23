@@ -1,4 +1,4 @@
-// quantizeWorker.js
+
 import { kMeansQuantize } from "./kMeansQuantizeWorkerSafe.js";
 
 self.onmessage = async (e) => {

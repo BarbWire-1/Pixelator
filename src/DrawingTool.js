@@ -1,3 +1,8 @@
+/*
+MIT License
+Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
+*/
+
 import { snapshot } from './main.js'
 export class DrawingTool {
 	constructor (canvasManager, colorPicker, modeSelect, displayEl) {

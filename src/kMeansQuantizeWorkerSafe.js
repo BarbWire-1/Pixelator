@@ -1,3 +1,8 @@
+/*
+MIT License
+Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
+*/
+
 // Switched to stay all in rgb - much quicker then converting forth and backfaceVisibility:
 
 // K-means color quantization.
