@@ -1,3 +1,6 @@
+/*TODO clean this up and remove all magic numbers */
+/* TODO add themes */
+
 /* ================== Base ================== */
 body {
      font-family: sans-serif;
@@ -107,6 +110,8 @@ input[type="color"].circle-picker::-moz-color-swatch {
      border-radius: 6px;
      padding: 6px 12px;
      cursor: pointer;
+     width: calc(100% - 24px)
+
 }
 
 .file-btn::file-selector-button {
