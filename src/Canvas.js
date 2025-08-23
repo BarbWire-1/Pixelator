@@ -229,13 +229,13 @@ export class CanvasManager {
 	}
 
 	drawGrid() {
-		if (!this.activeLayer) return;
+	//	if (!this.activeLayer) return;
 		const ctx = this.ctx;
 		const width = this.activeLayer.width;
 		const height = this.activeLayer.height;
 		const ts = this.tileSize;
 
-		ctx.strokeStyle = "#ccc";
+		ctx.strokeStyle = "#4b4b4b";
 		ctx.lineWidth = 1;
 
 		for (let x = 0; x <= width; x += ts) {

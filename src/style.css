@@ -30,7 +30,7 @@ body {
 
 /* ================== Canvas ================== */
 #canvas-container {
-     padding: 20px;
+     /* padding: 20px; */
      /* background: pink; */
      width: 100%;
      height: 100%;
@@ -57,7 +57,7 @@ canvas {
      image-rendering: pixelated;
      image-rendering: crisp-edges;
      display: block;
-     margin: 10px;
+     /* margin: 10px; */
 
 }
 
@@ -523,4 +523,5 @@ input[type="number"]::-webkit-outer-spin-button {
      /* always fills parent width */
      box-sizing: border-box;
      /* include padding/border */
+     color: #4b4b4b53
 }
