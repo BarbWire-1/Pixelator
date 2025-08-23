@@ -211,7 +211,7 @@ export function initPixelator() {
 					// Split the message into lines
 					const lines = entry.message.split("\n");
 					const firstLine = `[${entry.time}] ${lines[ 0 ]}`;
-					const restLines = lines.slice(1).map(line => "    " + line); 
+					const restLines = lines.slice(1).map(line => "    " + line);
 
 					el.textContent = [ firstLine, ...restLines ].join("\n");
 

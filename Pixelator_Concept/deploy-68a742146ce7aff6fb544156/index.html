@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+     <meta charset="UTF-8">
+     <title>Pixelator - pixelate your image and handle colors</title>
+     <style>
+
+     </style>
+     <link rel="stylesheet" href="style.css">
+     <script type="module" src="main.js"></script>
+</head>
+
+<body>
+<div id="sidebar">
+
+     <!-- LOAD SECTION -->
+     <div class="sidebar-section">
+          <h3>Load</h3>
+
+          <!-- Just one input, styled like a button -->
+          <input type="file" id="raw-image-input" accept="image/*" class="file-btn">
+     </div>
+
+
+     <div class="sidebar-section">
+          <h3>History</h3>
+          <button id="undoBtn">Undo</button>
+          <button id="redoBtn">Redo</button>
+     </div>
+
+     <!-- SETTINGS & APPLY SECTION -->
+     <div class="sidebar-section">
+          <h3>Settings & Apply</h3>
+          <div class="label-input">
+               <label for="tile-size-input">Tile Size:</label>
+               <input type="number" id="tile-size-input" value="1" min="1">
+          </div>
+          <div class="label-input">
+               <label for="color-count-input">Colors:</label>
+               <input type="number" id="color-count-input" value="16" min="2" max="256">
+          </div>
+          <label><input type="checkbox" id="toggleGrid"> Show Grid</label>
+          <button id="quantize-tile-btn" disabled>Quantize & Tile</button>
+          <input type="range" id="zoom" min=".1" max="3" step=".1"value="1">
+     </div>
+
+     <!-- COLORS / PALETTE SECTION -->
+     <div class="sidebar-section">
+          <h3>Colors & Palette</h3>
+
+
+          <button id="createPalette">Create Palette</button>
+          <!-- Erase Selected Color Button -->
+          <button id="eraseBtn">Erase Selected Color</button>
+          <input type="color" id="colorPicker"  class="circle-picker" value="#ff0000" />
+          <div id="color-palette">
+
+          </div>
+          <div class="swatches" id="swatchesContainer"></div>
+     </div>
+
+     <!-- TOOLS SECTION -->
+     <div class="sidebar-section">
+          <h3>Tools</h3>
+          <div id="controls">
+               <!-- Brush / Eraser -->
+               <label>
+                    <input type="radio" name="toolMode" value="brush" checked> Brush
+               </label>
+               <label>
+                    <input type="radio" name="toolMode" value="eraser"> Eraser
+               </label>
+
+               <!-- Mirror Mode -->
+               <select id="modeSelect">
+                    <option value="N">Normal</option>
+                    <option value="H">Horizontal Mirror</option>
+                    <option value="V">Vertical Mirror</option>
+                    <option value="B">Both H+V</option>
+                    <option value="D">Diagonal</option>
+               </select>
+               <div id="display"></div>
+
+          </div>
+     </div>
+
+
+</div>
+<div id="canvas-container">
+     <div id="canvas-wrapper">
+          <canvas id="canvas"></canvas>
+     </div>
+</div>
+
+</body>
+
+</html>

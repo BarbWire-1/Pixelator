@@ -1,0 +1,422 @@
+/* ================== Base ================== */
+body {
+     font-family: sans-serif;
+     background: #222;
+     color: #eee;
+     margin: 0;
+     display: flex;
+     flex-direction: row-reverse;
+     /* sidebar on the right */
+     height: 100vh;
+     font-size: 1.2em;
+}
+
+/* ================== Sidebar ================== */
+#sidebar {
+     position: absolute;
+     right: 0;
+     max-width: 350px;
+     min-width: 350px;
+     background: #2a2a2a;
+     padding: 15px;
+     display: flex;
+     flex-direction: column;
+     gap: 15px;
+     border-left: 2px solid #444;
+     box-sizing: border-box;
+
+     overflow-y: auto;
+     z-index: 1000;
+}
+
+/* Custom scrollbars */
+#sidebar::-webkit-scrollbar,
+#swatchesContainer::-webkit-scrollbar {
+     width: 8px;
+}
+
+#sidebar::-webkit-scrollbar-thumb,
+#swatchesContainer::-webkit-scrollbar-thumb {
+     background: #555;
+     border-radius: 4px;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover,
+#swatchesContainer::-webkit-scrollbar-thumb:hover {
+     background: #777;
+}
+
+#sidebar::-webkit-scrollbar-track,
+#swatchesContainer::-webkit-scrollbar-track {
+     background: #2a2a2a;
+}
+
+.sidebar-section {
+     background: #333;
+     padding: 10px;
+     border-radius: 8px;
+     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+     display: flex;
+     flex-direction: column;
+     gap: 12px;
+     margin-bottom: 25px;
+}
+
+.sidebar-section h3 {
+     margin: 0 0 6px 0;
+
+     border-bottom: 1px solid #555;
+     padding-bottom: 5px;
+     color: #0af;
+}
+
+#modeSelect {
+     width: 100%;
+     margin-bottom: 0.5rem;
+     font-size: .8em;
+     padding: 5px;
+     margin-bottom: 10px;
+     /* some spacing before radios */
+}
+
+#controls label {
+     display: block;
+     text-align: left;
+     margin: 0.25rem 0;
+}
+
+
+/* ================== Canvas ================== */
+#canvas-container {
+     flex-grow: 1;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     margin: 20px;
+     box-sizing: border-box;
+     overflow: auto;
+     overflow-x: hidden;
+}
+
+canvas {
+     border: 1px solid #444;
+     background-color: transparent;
+
+     /* Dotted pattern background */
+     background-image:
+          radial-gradient(#444 1px, transparent 1px);
+     background-size: 18px 18px;
+     /* adjust spacing of dots */
+
+     image-rendering: pixelated;
+     image-rendering: crisp-edges;
+
+     display: block;
+     margin-bottom: 10px;
+}
+
+
+/* ================== Color Palette ================== */
+#color-palette {}
+
+/* ================== Swatches ================== */
+#swatchesContainer {
+
+     max-height: 300px;
+     overflow-y: auto;
+}
+
+.swatches {
+     display: flex;
+     flex-wrap: wrap;
+     gap: 6px;
+}
+
+.swatch {
+     width: 30px;
+     height: 30px;
+     border: 1px solid #000;
+     cursor: pointer;
+     position: relative;
+     border-radius: 4px;
+     margin: 2px;
+}
+
+.swatch.selected {
+     outline: 2px solid red;
+}
+
+.swatch.transparent::after {
+     content: '';
+     position: absolute;
+     inset: 0;
+     background:
+          repeating-linear-gradient(45deg, white 0, white 1px, transparent 1px, transparent 6px),
+          repeating-linear-gradient(-45deg, white 0, white 1px, transparent 1px, transparent 6px);
+     pointer-events: none;
+}
+
+.swatch.erased {
+     background: repeating-linear-gradient(45deg,
+               white,
+               white 4px,
+               transparent 4px,
+               transparent 8px);
+}
+
+.swatch.erased::after {
+     content: "✕";
+     color: rgba(255, 255, 255, 0.9);
+     font-weight: bold;
+     position: absolute;
+     top: 50%;
+     left: 50%;
+     transform: translate(-50%, -50%);
+}
+
+.swatch.deselect::after {
+     content: '×';
+     position: absolute;
+     inset: 0;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     color: red;
+     font-weight: bold;
+     pointer-events: none;
+}
+
+/* ================== Label + Input ================== */
+.label-input {
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     gap: 10px;
+     margin-bottom: 10px;
+}
+
+.label-input label {
+     flex-shrink: 0;
+     width: 100px;
+     color: #eee;
+
+     text-align: left;
+}
+
+.label-input input[type="number"],
+.label-input input[type="text"],
+.label-input select {
+     width: 80px;
+     padding: 4px 6px;
+     border-radius: 4px;
+     border: 1px solid #555;
+     background: #222;
+     color: #eee;
+
+     text-align: right;
+     box-sizing: border-box;
+}
+
+/* ================== Buttons ================== */
+button {
+     padding: 6px 12px;
+     border: none;
+     border-radius: 4px;
+     background: #0af;
+     color: #222;
+     cursor: pointer;
+
+}
+
+button:disabled {
+     background: #555;
+     cursor: not-allowed;
+}
+
+/* ================== Spinner ================== */
+.spinner {
+     border: 8px solid #f3f3f3;
+     border-top: 8px solid #3498db;
+     border-radius: 50%;
+     width: 60px;
+     height: 60px;
+     animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+     0% {
+          transform: rotate(0deg);
+     }
+
+     100% {
+          transform: rotate(360deg);
+     }
+}
+
+/* ColorPicker */
+input[type="color"].circle-picker {
+     -webkit-appearance: none;
+     -moz-appearance: none;
+     appearance: none;
+
+     width: 40px;
+     /* adjust size */
+     height: 40px;
+     border: 1px solid white;
+     border-radius: 50%;
+     /* 👈 makes it round */
+     overflow: hidden;
+     cursor: pointer;
+     padding: 0;
+}
+
+/* WebKit/Blink browsers */
+input[type="color"].circle-picker::-webkit-color-swatch-wrapper {
+     padding: 0;
+}
+
+input[type="color"].circle-picker::-webkit-color-swatch {
+     border: none;
+     border-radius: 50%;
+}
+
+/* Firefox */
+input[type="color"].circle-picker::-moz-color-swatch {
+     border: none;
+     border-radius: 50%;
+}
+
+.file-btn {
+
+     background: #0af;
+     border: none;
+     border-radius: 6px;
+     padding: 6px 12px;
+     cursor: pointer;
+
+}
+
+.file-btn::file-selector-button {
+
+     background: #0af;
+     border: none;
+     border-radius: 6px;
+     padding: 6px 12px;
+     cursor: pointer;
+
+}
+
+.file-btn::file-selector-button:hover {
+     background: #0056b3;
+}
+
+/* ================== Universal Scrollbars ================== */
+
+/* WebKit/Blink (Chrome, Edge, Safari) */
+*::-webkit-scrollbar {
+     width: 10px;
+     height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+     background: #555;
+     /* thumb color */
+     border-radius: 5px;
+     /* roundness */
+}
+
+*::-webkit-scrollbar-thumb:hover {
+     background: #777;
+}
+
+*::-webkit-scrollbar-track {
+     background: #222;
+     /* track color */
+}
+
+/* Firefox */
+* {
+     scrollbar-width: thin;
+     /* "auto" or "thin" */
+     scrollbar-color: #555 #222;
+     /* thumb and track */
+}
+
+
+
+.label-input input[type="number"] {
+     width: 80px;
+     padding: 4px 6px 4px 6px;
+     /* padding-left and top/bottom */
+     border-radius: 4px;
+     border: 1px solid #555;
+     background: #222;
+     color: #eee;
+     text-align: left;
+     font-size: .8em;
+     /* number right-aligned */
+     box-sizing: border-box;
+}
+button {
+     font-size: .8em;
+}
+
+/* Firefox spin buttons */
+input[type="number"] {
+     -moz-appearance: textfield;
+     /* keep arrows visible */
+}
+
+/* Webkit/Blink browsers */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+     width: auto;
+     height: auto;
+}
+
+
+/* Chrome, Edge, Safari */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+     opacity: 1;
+     /* ensure always visible */
+     -webkit-appearance: inner-spin-button;
+     display: block;
+
+}
+
+/* Firefox */
+input[type="number"] {
+     -moz-appearance: number-input;
+     /* forces spin buttons to always appear */
+}
+
+/* Keep the sidebar fixed */
+#sidebar {
+     position: fixed;
+     top: 0;
+     right: 0;
+     height: 100vh;
+     width: 350px;
+     z-index: 1000;
+     /* existing styles... */
+}
+
+/* Canvas container fills remaining space */
+#canvas-container {
+     margin-right: 370px;
+     /* leave space for sidebar */
+     flex-grow: 1;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     height: 100vh;
+     overflow: auto;
+     box-sizing: border-box;
+}
+
+/* Scale only the wrapper */
+#canvas-wrapper {
+     display: inline-block;
+     transform-origin: center center;
+}
