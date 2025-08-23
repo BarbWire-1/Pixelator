@@ -500,3 +500,27 @@ input[type="number"]::-webkit-outer-spin-button {
      background-size: 8px 10px;
      background-repeat: repeat-y;
 }
+
+#sidebar {
+
+     /* fixed starting width */
+     min-width: 300px;
+     /* don't shrink too much */
+     max-width: 600px;
+     /* limit resizing */
+     box-sizing: border-box;
+     /* include padding/border in width */
+     display: flex;
+     flex-direction: column;
+     overflow-x: hidden;
+
+     width: 350px;
+     /* prevents horizontal overflow */
+}
+
+.sidebar-section {
+     width: 100%;
+     /* always fills parent width */
+     box-sizing: border-box;
+     /* include padding/border */
+}
