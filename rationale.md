@@ -39,3 +39,13 @@ Since K-Means initializes with arbitrary centroids, each quantization may produc
 - **Versatile:** While optimized for pixel-art, it **can handle other images**, though the primary goal is pixel-accurate quantization.
 
 > ⚠️ **Tip:** This is not a general graphics app; the workflow is optimized for **pixel-art and pixel-accurate quantization**, not for photo editing or smooth gradients—even if it can technically process them.
+
+
+| tileSize | Pixels per tile | Relative pixels to full res | Observed speed effect       |
+| -------- | --------------- | --------------------------- | --------------------------- |
+| 1        | 1×1 = 1         | 100 %                       | Slowest (full k-means load) |
+| 2        | 2×2 = 4         | 25 %                        | \~4× faster than tileSize 1 |
+| 3        | 3×3 = 9         | \~11 %                      | \~9× faster than tileSize 1 |
+| 4        | 4×4 = 16        | 6.25 %                      | \~16× faster                |
+| 5        | 5×5 = 25        | 4 %                         | \~25× faster                |
+| 10       | 10×10 = 100     | 1 %                         | \~100× faster               |

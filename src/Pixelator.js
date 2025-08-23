@@ -74,7 +74,7 @@ export function initPixelator() {
 
 	function setupPaletteListeners() {
 		elements.eraseBtn.addEventListener("click", () => {
-			pm.eraseSelectedSwatch();
+			pm.eraseSelectedPixels();
 			snapshot("Erase selected swatch");
 		});
 
@@ -88,7 +88,7 @@ export function initPixelator() {
 			const r = parseInt(hex.substr(1, 2), 16);
 			const g = parseInt(hex.substr(3, 2), 16);
 			const b = parseInt(hex.substr(5, 2), 16);
-			pm.recolorSelectedSwatch(r, g, b);
+			pm.recolorSelectedPixels(r, g, b);
 
 		});
 
@@ -144,7 +144,7 @@ export function initPixelator() {
 				snapshot("Load image");
 			};
 			logPanel.innerHTML = "";
-			elements.swatchesContainer.innerHTML =""
+			elements.swatchesContainer.innerHTML = ""
 		});
 	}
 
@@ -190,7 +190,7 @@ export function initPixelator() {
 	// Sync checkbox with flag
 	showLogsCheckbox.addEventListener("change", () => {
 		cm.showLogs = showLogsCheckbox.checked;
-		logPanel.innerHTML =''
+		logPanel.innerHTML = ''
 	});
 
 
@@ -222,7 +222,7 @@ export function initPixelator() {
 			return true;
 		}
 	});
-document.getElementById('kMeans-iter').addEventListener('change', (e)=> cm.kMeansIterations = +e.target.value)
+	document.getElementById('kMeans-iter').addEventListener('change', (e) => cm.kMeansIterations = +e.target.value)
 	snapshot("Initial state");
 
 	// Return managers in case you need them outside

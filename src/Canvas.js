@@ -1,4 +1,3 @@
-import { kMeansQuantize } from "./canvaskMeans.js";
 
 //=========================
 // LAYER CLASS
@@ -289,34 +288,6 @@ export class CanvasManager {
 		this.log(`Task "applyQuantizeAndTile" completed in ${(performance.now() - taskStart).toFixed(2)} ms`);
 		return palette;
 	}
-// NOT IMPLEMENTED - just an idea
-// 	async applyQuantizeAndTileFastPreview(img, colorCount = 16, internalDownscale = 10) {
-// 		const taskStart = performance.now();
-// 		if (!img || !this.dimensions) return;
-//
-// 		const { width: canvasW, height: canvasH } = this.dimensions;
-//
-// 		this.log(`Starting FAST quantization preview with colorCount=${colorCount}, internalDownscale=${internalDownscale}`);
-//
-// 		const tempCanvas = this.createTempCanvas(img, Math.ceil(canvasW / internalDownscale), Math.ceil(canvasH / internalDownscale), true, "Step 1 (internal downscale)");
-//
-// 		const step2Start = performance.now();
-// 		const { palette, clusteredData, uniqueCount } = await kMeansQuantize(tempCanvas, colorCount, this.kMeansIterations);
-// 		this.log(`Step 2 (k-means) done in ${(performance.now() - step2Start).toFixed(2)} ms`);
-// 		this.log(`Unique colors found: ${uniqueCount}`);
-// 		this.log(`Palette length after quantization: ${palette.length}`);
-//
-// 		const layer = this.mapClusteredToLayer(clusteredData, canvasW, canvasH, 1, "Step 3 (map back to full resolution)");
-//
-// 		const step4Start = performance.now();
-// 		this.layers.push(layer);
-// 		this.activeLayer = layer;
-// 		this.redraw();
-// 		this.log(`Step 4 (push layer & redraw) done in ${(performance.now() - step4Start).toFixed(2)} ms`);
-//
-// 		this.log(`Task "applyQuantizeAndTileFastPreview" completed in ${(performance.now() - taskStart).toFixed(2)} ms`);
-// 		return palette;
-// 	}
 
 	// --------------------
 	// Pixel editing
@@ -361,3 +332,33 @@ export class CanvasManager {
 		this.log(`Bounding box drawn for ${pixels.length} pixels`);
 	}
 }
+
+
+// NOT IMPLEMENTED - just an idea
+// 	async applyQuantizeAndTileFastPreview(img, colorCount = 16, internalDownscale = 10) {
+// 		const taskStart = performance.now();
+// 		if (!img || !this.dimensions) return;
+//
+// 		const { width: canvasW, height: canvasH } = this.dimensions;
+//
+// 		this.log(`Starting FAST quantization preview with colorCount=${colorCount}, internalDownscale=${internalDownscale}`);
+//
+// 		const tempCanvas = this.createTempCanvas(img, Math.ceil(canvasW / internalDownscale), Math.ceil(canvasH / internalDownscale), true, "Step 1 (internal downscale)");
+//
+// 		const step2Start = performance.now();
+// 		const { palette, clusteredData, uniqueCount } = await kMeansQuantize(tempCanvas, colorCount, this.kMeansIterations);
+// 		this.log(`Step 2 (k-means) done in ${(performance.now() - step2Start).toFixed(2)} ms`);
+// 		this.log(`Unique colors found: ${uniqueCount}`);
+// 		this.log(`Palette length after quantization: ${palette.length}`);
+//
+// 		const layer = this.mapClusteredToLayer(clusteredData, canvasW, canvasH, 1, "Step 3 (map back to full resolution)");
+//
+// 		const step4Start = performance.now();
+// 		this.layers.push(layer);
+// 		this.activeLayer = layer;
+// 		this.redraw();
+// 		this.log(`Step 4 (push layer & redraw) done in ${(performance.now() - step4Start).toFixed(2)} ms`);
+//
+// 		this.log(`Task "applyQuantizeAndTileFastPreview" completed in ${(performance.now() - taskStart).toFixed(2)} ms`);
+// 		return palette;
+// 	}

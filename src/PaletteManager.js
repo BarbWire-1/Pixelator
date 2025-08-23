@@ -1,16 +1,5 @@
 import { Colors } from "../Pixelator_Concept/Colors.js";
-import { snapshot } from './main.js'
-function getElementAbsolutePosition(el) {
-	let x = 0, y = 0;
-	while (el) {
-		x += el.offsetLeft - el.scrollLeft + el.clientLeft;
-		y += el.offsetTop - el.scrollTop + el.clientTop;
-		el = el.offsetParent;
-	}
-	return { left: x, top: y };
-}
-
-
+// TODO test hashing colorStrings - last flawed as mac too slow
 //=========================
 // PALETTE MANAGER
 //=========================
@@ -22,228 +11,110 @@ export class PaletteManager {
 		this.swatches = [];
 		this.selectedSwatch = null;
 
+		// Handle clicks on swatches
 		this.container.addEventListener("click", (e) => this.handleClick(e));
-
-
-
 	}
 
+	//=========================
+	// PALETTE CREATION WORKFLOW
+	//=========================
+	createPalette() {
+		if (!this.cm.activeLayer) return null;
+		this.clearPaletteContainer();
+
+		// Extract and sort palette from active layer
+		const palette = Colors.smoothSort(this.getPixelData());
+		this.addDeselectSwatch();
+		palette.forEach((color) => this.addColorSwatch(color));
+	}
+
+	getPixelData() {
+		const data = this.cm.activeLayer.imageData.data;
+		const palette = [];
+		const colorMap = new Map();
+
+		for (let i = 0; i < data.length; i += 4) {
+			const r = data[ i ], g = data[ i + 1 ], b = data[ i + 2 ];
+			const key = (r << 16) | (g << 8) | b;
+
+			let entry = colorMap.get(key);
+			if (!entry) {
+				entry = { r, g, b, pixels: [] };
+				colorMap.set(key, entry);
+				palette.push(entry);
+			}
+			entry.pixels.push(i);
+		}
+
+		return palette;
+	}
+
+	addDeselectSwatch() {
+		const deselectDiv = document.createElement("div");
+		deselectDiv.className = "swatch deselect";
+		deselectDiv.title = "Deselect";
+		this.container.appendChild(deselectDiv);
+	}
+
+	addColorSwatch(colorData) {
+		const { r, g, b, pixels } = colorData;
+		const div = document.createElement("div");
+		div.className = "swatch";
+		div.style.backgroundColor = `rgb(${r},${g},${b})`;
+		this.container.appendChild(div);
+
+		this.swatches.push({
+			r,
+			g,
+			b,
+			pixels: pixels.map((idx) => ({ index: idx })),
+			div
+		});
+	}
+
+	clearPaletteContainer() {
+		this.container.innerHTML = "";
+		this.swatches = [];
+	}
+
+	//=========================
+	// SWATCH SELECTION
+	//=========================
 	handleClick(e) {
 		const div = e.target.closest(".swatch");
-		if (!div) return;
+		if (!div) return null;
 		if (div.classList.contains("deselect")) return this.deselectSwatch();
 
 		const swatch = this.swatches.find((s) => s.div === div);
-		if (!swatch) return;
-		this.selectSwatch(swatch);
+
+		swatch &&this.selectSwatch(swatch);
 	}
 
 	deselectSwatch() {
-		if (this.selectedSwatch)
-			this.selectedSwatch.div.classList.remove("selected");
+		if (!this.selectedSwatch) return null;
+
+		this.selectedSwatch.div.classList.remove("selected");
 		this.selectedSwatch = null;
 		this.cm.redraw();
-		this.colorPicker.value = "#000000";
-
+		this.colorPicker.value = "#ff0000";
 	}
 
 	selectSwatch(swatch) {
-		if (this.selectedSwatch) this.selectedSwatch.div.classList.remove("selected");
+		if (!this.selectedSwatch) return null;
+
+		this.selectedSwatch.div.classList.remove("selected");
 		swatch.div.classList.add("selected");
 		this.selectedSwatch = swatch;
 
 		this.cm.redraw();
+		// marks a bbox around the pixels of selected color
 		this.cm.drawBoundingBox(swatch.pixels);
-		this.colorPicker.value =  this.rgbToHex(swatch.r, swatch.g, swatch.b);
 
-// 		// --- cleanup any old temp picker first ---
-// 		if (this.tempPicker && document.body.contains(this.tempPicker)) {
-// 			this.tempPicker.remove();
-// 		}
-//
-// 		// Create new temporary color input
-// 		const tempPicker = document.createElement("input");
-// 		tempPicker.type = "color";
-// 		tempPicker.value = this.rgbToHex(swatch.r, swatch.g, swatch.b);
-// 		document.body.appendChild(tempPicker);
-//
-// 		this.tempPicker = tempPicker; // keep reference
-//
-// 		// Position exactly at swatch
-// 		const pos = getElementAbsolutePosition(swatch.div);
-// 		tempPicker.style.position = "fixed";
-// 		tempPicker.style.left = pos.left - 5 + "px";
-// 		tempPicker.style.top = (pos.top - 5 + "px");
-// 		tempPicker.type = "color";
-// 		tempPicker.classList.add("circle-picker");
-// 		tempPicker.style.zIndex = 1000;
-//
-// 		// Update swatch color on input
-// 		const onInput = () => {
-// 			const [ r, g, b ] = tempPicker.value.match(/\w\w/g).map(h => parseInt(h, 16));
-// 			this.recolorSelectedSwatch(r, g, b);
-// 			//snapshot(`recolored with ${tempPicker.value}`)
-// 		};
-//
-// 		// Cleanup
-// 		const cleanup = () => {
-// 			if (document.body.contains(tempPicker)) {
-// 				tempPicker.remove();
-// 			}
-// 			snapshot(`recolored with ${tempPicker.value}`)
-// 			this.tempPicker = null;
-//
-// 			tempPicker.removeEventListener("input", onInput);
-// 			tempPicker.removeEventListener("change", cleanup);
-// 			tempPicker.removeEventListener("blur", cleanup);
-//
-// 		};
-//
-// 		tempPicker.addEventListener("input", onInput);
-// 		tempPicker.addEventListener("change", cleanup);
-// 		tempPicker.addEventListener("blur", cleanup);
-
-		//tempPicker.click()
+		const { r, g, b } = swatch;
+		this.colorPicker.value = this.rgbToHex(r, g, b);
 	}
 
 
-
-
-
-
-
-	// Add two helper methods in PaletteManager:
-	eraseSelectedSwatch() {
-		if (!this.selectedSwatch) return;
-		this.cm.erasePixels(this.selectedSwatch.pixels);
-		this.selectedSwatch.div.classList.add("erased"); // 🔹 add style
-	}
-
-
-	recolorSelectedSwatch(r, g, b) {
-		if (!this.selectedSwatch) return;
-		this.cm.recolorPixels(this.selectedSwatch.pixels, r, g, b);
-
-		// 🔹 update swatch color
-		this.selectedSwatch.r = r;
-		this.selectedSwatch.g = g;
-		this.selectedSwatch.b = b;
-		this.selectedSwatch.div.style.backgroundColor = `rgb(${r},${g},${b})`;
-
-		// 🔹 ensure colorPicker shows same color
-		colorPicker.value = this.rgbToHex(r, g, b);
-
-		// remove "erased" if recolored
-		this.selectedSwatch.div.classList.remove("erased");
-	}
-
-
-
-	createPalette() {
-		if (!this.cm.activeLayer) return;
-		this.clear();
-
-		const data = this.cm.activeLayer.imageData.data;
-		const colorMap = {};
-		for (let i = 0; i < data.length; i += 4) {
-			const key = `${data[ i ]},${data[ i + 1 ]},${data[ i + 2 ]}`;
-			if (!colorMap[ key ]) colorMap[ key ] = [];
-			colorMap[ key ].push(i);
-		}
-
-		// Convert map → array
-		let palette = Object.entries(colorMap).map(([ k, pixels ]) => {
-			const [ r, g, b ] = k.split(",").map(Number);
-			return { r, g, b, pixels };
-		});
-
-		// 🔹 your existing smoother
-		palette = Colors.smoothSort(palette);
-
-		// First add the deselect swatch
-		const deselectDiv = document.createElement("div");
-		deselectDiv.className = "swatch deselect";
-		deselectDiv.title = "Deselect";
-		this.container.appendChild(deselectDiv);
-
-		// Build swatches in sorted order
-		palette.forEach(({ r, g, b, pixels }) => {
-			const div = document.createElement("div");
-			div.className = "swatch";
-			div.style.backgroundColor = `rgb(${r},${g},${b})`;
-			this.container.appendChild(div);
-
-			this.swatches.push({
-				r,
-				g,
-				b,
-				pixels: pixels.map(idx => ({ index: idx })),
-				div
-			});
-		});
-	}
-	addColorSwatch() {
-
-	}
-
-	clear() {
-		this.container.innerHTML = "";
-		this.swatches = [];
-	}
-	rgbToHex(r, g, b) {
-		return (
-			"#" +
-			[ r, g, b ].map((x) => x.toString(16).padStart(2, "0")).join("")
-		);
-	}
-	// =========================
-	// HISTORY SUPPORT
-	// =========================
-
-	// Return a serializable palette state
-	getPaletteState() {
-		return this.swatches.map(s => ({
-			r: s.r,
-			g: s.g,
-			b: s.b,
-			// optional: store pixel indices if you want to re-bind exactly
-			pixels: s.pixels.map(p => p.index),
-			selected: this.selectedSwatch === s
-		}));
-	}
-
-	// Restore a palette from saved state
-	setPaletteState(state) {
-		this.clear();
-
-		// First add the deselect swatch
-		const deselectDiv = document.createElement("div");
-		deselectDiv.className = "swatch deselect";
-		deselectDiv.title = "Deselect";
-		this.container.appendChild(deselectDiv);
-
-		state.forEach(({ r, g, b, pixels, selected }) => {
-			const div = document.createElement("div");
-			div.className = "swatch";
-			div.style.backgroundColor = `rgb(${r},${g},${b})`;
-			this.container.appendChild(div);
-
-			const swatch = {
-				r,
-				g,
-				b,
-				pixels: pixels.map(idx => ({ index: idx })), // rebuild pixel refs
-				div
-			};
-			this.swatches.push(swatch);
-
-			if (selected) {
-				this.selectSwatch(swatch);
-			}
-		});
-	}
-
-	// Return currently selected swatch’s color (or null)
 	getSelectedColor() {
 		if (!this.selectedSwatch) return null;
 		return {
@@ -253,19 +124,73 @@ export class PaletteManager {
 		};
 	}
 
-	// Restore selection by matching color
 	setSelectedColor(color) {
 		if (!color) {
 			this.deselectSwatch();
 			return;
 		}
-		const swatch = this.swatches.find(
-			s => s.r === color.r && s.g === color.g && s.b === color.b
-		);
-		if (swatch) {
-			this.selectSwatch(swatch);
-		}
+		const swatch = this.swatches.find((s) => s.r === color.r && s.g === color.g && s.b === color.b);
+		if (swatch) this.selectSwatch(swatch);
 	}
 
+	//=========================
+	// PIXEL OPERATIONS
+	//=========================
+	eraseSelectedPixels() {
+		if (!this.selectedSwatch) return;
+		this.cm.erasePixels(this.selectedSwatch.pixels);
+		this.selectedSwatch.div.classList.add("erased");
+	}
 
+	recolorSelectedPixels(r, g, b) {
+		if (!this.selectedSwatch) return;
+
+		this.cm.recolorPixels(this.selectedSwatch.pixels, r, g, b);
+
+		const sw = this.selectedSwatch;
+		sw.r = r;
+		sw.g = g;
+		sw.b = b;
+		sw.div.style.backgroundColor = `rgb(${r},${g},${b})`;
+
+		this.colorPicker.value = this.rgbToHex(r, g, b);
+		sw.div.classList.remove("erased");
+	}
+
+	//=========================
+	// HISTORY SUPPORT
+	//=========================
+	getPaletteState() {
+		return this.swatches.map((s) => ({
+			r: s.r,
+			g: s.g,
+			b: s.b,
+			pixels: s.pixels.map((p) => p.index),
+			selected: this.selectedSwatch === s
+		}));
+	}
+
+	setPaletteState(state) {
+		this.clearPaletteContainer();
+		this.addDeselectSwatch();
+
+		state.forEach(({ r, g, b, pixels, selected }) => {
+			const div = document.createElement("div");
+			div.className = "swatch";
+			div.style.backgroundColor = `rgb(${r},${g},${b})`;
+			this.container.appendChild(div);
+
+			const swatch = { r, g, b, pixels: pixels.map((idx) => ({ index: idx })), div };
+			this.swatches.push(swatch);
+
+			if (selected) this.selectSwatch(swatch);
+		});
+	}
+
+	//=========================
+	// UTILITY - here needed for colorPicker.value
+	//=========================
+	rgbToHex(r, g, b) {
+		return "#" + [ r, g, b ].map((x) => x.toString(16).padStart(2, "0")).join("");
+	}
 }
