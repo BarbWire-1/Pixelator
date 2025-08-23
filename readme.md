@@ -4,6 +4,10 @@ This project uses **K-Means clustering** for color quantization, optimized speci
 Since K-Means initializes with arbitrary centroids, each quantization may produce slightly different results.
 
 ---
+![Screenshot of Pixel-Art Quantization UI](./pixelator.png)
+
+Test it out:
+[![Netlify Status](https://api.netlify.com/api/v1/badges/25bc2fa9-a036-45b2-bab8-bfd5e61398c9/deploy-status)](https://pixelatorrr.netlify.app/)
 
 ## Design Decisions
 
@@ -40,7 +44,7 @@ Since K-Means initializes with arbitrary centroids, each quantization may produc
 
 > ⚠️ **Tip:** This is not a general graphics app; the workflow is optimized for **pixel-art and pixel-accurate quantization**, not for photo editing or smooth gradients—even if it can technically process them.
 
-
+### Influence of tile (block) size on performance
 | tileSize | Pixels per tile | Relative pixels to full res | Observed speed effect       |
 | -------- | --------------- | --------------------------- | --------------------------- |
 | 1        | 1×1 = 1         | 100 %                       | Slowest (full k-means load) |
