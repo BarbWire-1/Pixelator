@@ -154,13 +154,34 @@ export function initPixelator() {
 	}
 
 	function setupZoom() {
-		const container = elements.canvas.parentNode;
-		elements.zoomInput.addEventListener("change", () => {
+		const container = document.getElementById("canvas-container");
+		const canvas = elements.canvas;
+		let lastScale = 1;
+
+		elements.zoomInput.addEventListener("input", () => {
 			const scale = parseFloat(elements.zoomInput.value);
-			container.style.transform = `scale(${scale})`;
-			container.style.transformOrigin = "top center";
+
+			// switch origin depending on scale
+			canvas.style.transformOrigin = scale > 1 ? "top left" : "center center";
+			canvas.style.transform = `scale(${scale})`;
+
+			// save scroll relative to canvas top-left
+			const scrollX = container.scrollLeft;
+			const scrollY = container.scrollTop;
+
+			// restore scroll proportionally
+			container.scrollLeft = scrollX * (scale / lastScale);
+			container.scrollTop = scrollY * (scale / lastScale);
+
+			lastScale = scale;
 		});
 	}
+
+
+
+
+
+
 
 	function setupUndoRedo() {
 		elements.undoBtn.addEventListener("click", () => {

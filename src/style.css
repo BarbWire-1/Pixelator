@@ -9,6 +9,199 @@ body {
      /* sidebar on the right */
      height: 100vh;
      font-size: 1em;
+     overflow: hidden;
+}
+
+/* ================== Buttons ================== */
+button {
+     padding: 6px 12px;
+     border: none;
+     border-radius: 4px;
+     background: #0af;
+     color: #222;
+     cursor: pointer;
+     font-size: .8em;
+}
+
+button:disabled {
+     background: #555;
+     cursor: not-allowed;
+}
+
+/* ================== Canvas ================== */
+#canvas-container {
+     flex-grow: 1;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     margin: 20px;
+     box-sizing: border-box;
+     overflow: auto;
+
+     padding: 20px;
+}
+
+#canvas-container {
+     margin-right: 370px;
+     /* leave space for sidebar */
+     flex-grow: 1;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     height: 100vh;
+     max-height: 100vh;
+
+
+     padding: 10px;
+     box-sizing: border-box;
+}
+
+
+
+canvas {
+     border: 1px solid #444;
+     background-color: transparent;
+     background-image: radial-gradient(#444 1px, transparent 1px);
+     background-size: 18px 18px;
+     image-rendering: pixelated;
+     image-rendering: crisp-edges;
+     display: block;
+     margin: 10px;
+}
+
+/* ================== Color Palette ================== */
+#color-palette {}
+
+/* ColorPicker */
+input[type="color"].circle-picker {
+     -webkit-appearance: none;
+     -moz-appearance: none;
+     appearance: none;
+     width: 40px;
+     height: 40px;
+     border: 1px solid white;
+     border-radius: 50%;
+     overflow: hidden;
+     cursor: pointer;
+     padding: 0;
+}
+
+input[type="color"].circle-picker::-webkit-color-swatch-wrapper {
+     padding: 0;
+}
+
+input[type="color"].circle-picker::-webkit-color-swatch {
+     border: none;
+     border-radius: 50%;
+}
+
+input[type="color"].circle-picker::-moz-color-swatch {
+     border: none;
+     border-radius: 50%;
+}
+
+/* ================== File Button ================== */
+.file-btn {
+     background: #0af;
+     border: none;
+     border-radius: 6px;
+     padding: 6px 12px;
+     cursor: pointer;
+}
+
+.file-btn::file-selector-button {
+     background: #0af;
+     border: none;
+     border-radius: 6px;
+     padding: 6px 12px;
+     cursor: pointer;
+}
+
+.file-btn::file-selector-button:hover {
+     background: #0056b3;
+}
+
+/* ================== Inputs ================== */
+input[type="number"] {
+     -moz-appearance: number-input;
+     /* forces spin buttons to always appear */
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+     width: auto;
+     height: auto;
+     opacity: 1;
+     -webkit-appearance: inner-spin-button;
+     display: block;
+}
+
+/* ================== Label + Input ================== */
+.label-input {
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     gap: 10px;
+     margin-bottom: 10px;
+}
+
+.label-input label {
+     flex-shrink: 0;
+     width: 100px;
+     color: #eee;
+     text-align: left;
+}
+
+.label-input input[type="number"],
+.label-input input[type="text"],
+.label-input select {
+     width: 80px;
+     padding: 4px 6px;
+     border-radius: 4px;
+     border: 1px solid #555;
+     background: #222;
+     color: #eee;
+     text-align: right;
+     box-sizing: border-box;
+}
+
+.label-input input[type="number"] {
+     width: 80px;
+     padding: 4px 6px 4px 6px;
+     border-radius: 4px;
+     border: 1px solid #555;
+     background: #222;
+     color: #eee;
+     text-align: left;
+     font-size: .8em;
+     box-sizing: border-box;
+}
+
+/* ================== Log Panel ================== */
+#log-panel {
+     background-color: black;
+     color: limegreen;
+     font-family: monospace;
+     font-size: 12px;
+     line-height: 1.2em;
+     padding: 8px;
+     border: 1px solid #333;
+     border-radius: 4px;
+     width: 100%;
+     height: 200px;
+     max-height: 200px;
+     overflow-y: auto;
+     box-sizing: border-box;
+     white-space: pre-wrap;
+}
+
+/* ================== Mode Select ================== */
+#modeSelect {
+     width: 100%;
+     margin-bottom: 0.5rem;
+     font-size: .8em;
+     padding: 5px;
+     margin-bottom: 10px;
 }
 
 /* ================== Sidebar ================== */
@@ -23,12 +216,15 @@ body {
      flex-direction: column;
      border-left: 2px solid #444;
      box-sizing: border-box;
-
      overflow-y: auto;
      z-index: 1000;
+     height: 100vh;
+     overflow-x: none;
 }
 
-/* Custom scrollbars */
+
+
+/* Sidebar scrollbars */
 #sidebar::-webkit-scrollbar,
 #swatchesContainer::-webkit-scrollbar {
      width: 8px;
@@ -50,6 +246,7 @@ body {
      background: #2a2a2a;
 }
 
+/* Sidebar sections */
 .sidebar-section {
      background: #333;
      padding: 10px;
@@ -59,60 +256,32 @@ body {
      flex-direction: column;
      gap: 12px;
      margin-bottom: 25px;
-}
-
-.sidebar-section h3 {
-     margin: 0 0 6px 0;
-
-     border-bottom: 1px solid #555;
-     padding-bottom: 5px;
-     color: #0af;
-}
-
-/* Sidebar section styling */
-.sidebar-section {
      border-bottom: 1px solid #555;
      margin-bottom: 8px;
-}
-
-.sidebar-section h3 {
-     cursor: pointer;
-     display: flex;
-     align-items: center;
-     justify-content: space-between;
-     padding: 5px;
-     margin: 0;
-     background: #222;
-     color: #fff;
-     font-size: 14px;
-}
-
-.sidebar-section h3::after {
-     content: "►";
-     /* Arrow */
-     font-size: 12px;
-     transition: transform 0.2s;
-}
-
-.sidebar-section.collapsed h3::after {
-     transform: rotate(90deg);
-     /* Arrow rotates when open */
-}
-
-.sidebar-section .section-content {
-     padding: 5px;
-     display: block;
+     width: 295px;
 }
 
 .sidebar-section.collapsed .section-content {
      display: none;
 }
 
+.sidebar-section.floating {
+     position: absolute;
+     z-index: 2000;
+     pointer-events: auto;
+     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+     transition: none;
+}
+
 .sidebar-section h3 {
+     margin: 0 0 6px 0;
+     border-bottom: 1px solid #555;
+     padding-bottom: 5px;
+     color: #0af;
      cursor: pointer;
      display: flex;
-     justify-content: space-between;
      align-items: center;
+     justify-content: space-between;
      padding: 5px;
      margin: 0;
      background: #222;
@@ -145,62 +314,28 @@ body {
      width: 100%;
 }
 
-.sidebar-section.collapsed .section-content {
-     display: none;
+/* ================== Spinner ================== */
+.spinner {
+     border: 8px solid #f3f3f3;
+     border-top: 8px solid #3498db;
+     border-radius: 50%;
+     width: 60px;
+     height: 60px;
+     animation: spin 1s linear infinite;
 }
 
-#modeSelect {
-     width: 100%;
-     margin-bottom: 0.5rem;
-     font-size: .8em;
-     padding: 5px;
-     margin-bottom: 10px;
-     /* some spacing before radios */
+@keyframes spin {
+     0% {
+          transform: rotate(0deg);
+     }
+
+     100% {
+          transform: rotate(360deg);
+     }
 }
-
-#controls label {
-     display: block;
-     text-align: left;
-     margin: 0.25rem 0;
-}
-
-
-/* ================== Canvas ================== */
-#canvas-container {
-     flex-grow: 1;
-     display: flex;
-     justify-content: center;
-     align-items: center;
-     margin: 20px;
-     box-sizing: border-box;
-     overflow: auto;
-     overflow-x: hidden;
-}
-
-canvas {
-     border: 1px solid #444;
-     background-color: transparent;
-
-     /* Dotted pattern background */
-     background-image:
-          radial-gradient(#444 1px, transparent 1px);
-     background-size: 18px 18px;
-     /* adjust spacing of dots */
-
-     image-rendering: pixelated;
-     image-rendering: crisp-edges;
-
-     display: block;
-     margin-bottom: 10px;
-}
-
-
-/* ================== Color Palette ================== */
-#color-palette {}
 
 /* ================== Swatches ================== */
 #swatchesContainer {
-
      max-height: 300px;
      overflow-y: auto;
 }
@@ -265,133 +400,7 @@ canvas {
      pointer-events: none;
 }
 
-/* ================== Label + Input ================== */
-.label-input {
-     display: flex;
-     justify-content: space-between;
-     align-items: center;
-     gap: 10px;
-     margin-bottom: 10px;
-}
-
-.label-input label {
-     flex-shrink: 0;
-     width: 100px;
-     color: #eee;
-
-     text-align: left;
-}
-
-.label-input input[type="number"],
-.label-input input[type="text"],
-.label-input select {
-     width: 80px;
-     padding: 4px 6px;
-     border-radius: 4px;
-     border: 1px solid #555;
-     background: #222;
-     color: #eee;
-
-     text-align: right;
-     box-sizing: border-box;
-}
-
-/* ================== Buttons ================== */
-button {
-     padding: 6px 12px;
-     border: none;
-     border-radius: 4px;
-     background: #0af;
-     color: #222;
-     cursor: pointer;
-
-}
-
-button:disabled {
-     background: #555;
-     cursor: not-allowed;
-}
-
-/* ================== Spinner ================== */
-.spinner {
-     border: 8px solid #f3f3f3;
-     border-top: 8px solid #3498db;
-     border-radius: 50%;
-     width: 60px;
-     height: 60px;
-     animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-     0% {
-          transform: rotate(0deg);
-     }
-
-     100% {
-          transform: rotate(360deg);
-     }
-}
-
-/* ColorPicker */
-input[type="color"].circle-picker {
-     -webkit-appearance: none;
-     -moz-appearance: none;
-     appearance: none;
-
-     width: 40px;
-     /* adjust size */
-     height: 40px;
-     border: 1px solid white;
-     border-radius: 50%;
-     /* 👈 makes it round */
-     overflow: hidden;
-     cursor: pointer;
-     padding: 0;
-}
-
-/* WebKit/Blink browsers */
-input[type="color"].circle-picker::-webkit-color-swatch-wrapper {
-     padding: 0;
-}
-
-input[type="color"].circle-picker::-webkit-color-swatch {
-     border: none;
-     border-radius: 50%;
-}
-
-/* Firefox */
-input[type="color"].circle-picker::-moz-color-swatch {
-     border: none;
-     border-radius: 50%;
-}
-
-.file-btn {
-
-     background: #0af;
-     border: none;
-     border-radius: 6px;
-     padding: 6px 12px;
-     cursor: pointer;
-
-}
-
-.file-btn::file-selector-button {
-
-     background: #0af;
-     border: none;
-     border-radius: 6px;
-     padding: 6px 12px;
-     cursor: pointer;
-
-}
-
-.file-btn::file-selector-button:hover {
-     background: #0056b3;
-}
-
 /* ================== Universal Scrollbars ================== */
-
-/* WebKit/Blink (Chrome, Edge, Safari) */
 *::-webkit-scrollbar {
      width: 10px;
      height: 10px;
@@ -399,9 +408,7 @@ input[type="color"].circle-picker::-moz-color-swatch {
 
 *::-webkit-scrollbar-thumb {
      background: #555;
-     /* thumb color */
      border-radius: 5px;
-     /* roundness */
 }
 
 *::-webkit-scrollbar-thumb:hover {
@@ -410,136 +417,38 @@ input[type="color"].circle-picker::-moz-color-swatch {
 
 *::-webkit-scrollbar-track {
      background: #222;
-     /* track color */
 }
 
-/* Firefox */
 * {
      scrollbar-width: thin;
-     /* "auto" or "thin" */
      scrollbar-color: #555 #222;
-     /* thumb and track */
-}
-
-
-
-.label-input input[type="number"] {
-     width: 80px;
-     padding: 4px 6px 4px 6px;
-     /* padding-left and top/bottom */
-     border-radius: 4px;
-     border: 1px solid #555;
-     background: #222;
-     color: #eee;
-     text-align: left;
-     font-size: .8em;
-     /* number right-aligned */
-     box-sizing: border-box;
-}
-
-button {
-     font-size: .8em;
-}
-
-/* Firefox spin buttons */
-input[type="number"] {
-     -moz-appearance: textfield;
-     /* keep arrows visible */
-}
-
-/* Webkit/Blink browsers */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-     width: auto;
-     height: auto;
-}
-
-
-/* Chrome, Edge, Safari */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-     opacity: 1;
-     /* ensure always visible */
-     -webkit-appearance: inner-spin-button;
-     display: block;
-
-}
-
-/* Firefox */
-input[type="number"] {
-     -moz-appearance: number-input;
-     /* forces spin buttons to always appear */
-}
-
-/* Keep the sidebar fixed */
-#sidebar {
-     position: fixed;
-     top: 0;
-     right: 0;
-     height: 100vh;
-     width: 350px;
-     z-index: 1000;
-     /* existing styles... */
-}
-
-/* Canvas container fills remaining space */
-#canvas-container {
-     margin-right: 370px;
-     /* leave space for sidebar */
-     flex-grow: 1;
-     display: flex;
-     justify-content: center;
-     align-items: center;
-     height: 100vh;
-     overflow: auto;
-     box-sizing: border-box;
-}
-
-/* Scale only the wrapper */
-#canvas-wrapper {
-     display: inline-block;
-     transform-origin: center center;
-}
-
-#log-panel {
-     background-color: black;
-     color: limegreen;
-     font-family: monospace;
-     font-size: 12px;
-     line-height: 1.2em;
-     padding: 8px;
-     border: 1px solid #333;
-     border-radius: 4px;
-     width: 100%;
-     height: 200px;
-     max-height: 200px;
-     /* adjust height as needed */
-     overflow-y: auto;
-     /* scroll when content exceeds height */
-     box-sizing: border-box;
-     white-space: pre-wrap;
-     /* preserve line breaks */
-}
-
-* {
      scroll-behavior: smooth;
 }
 
-#log-panel {
-     white-space: pre-wrap;
+/*TEST*/
+#canvas-wrapper {
+     overflow: auto;
+     width: 100%;
+   height: auto;
+     display: flex;
+     justify-content: center;
+     /* centers wrapper horizontally */
+     align-items: center;
+     /* centers wrapper vertically */
+     overflow: auto;
 }
 
-/* BEHAVIOUR */
-/* Default collapsed state */
-.sidebar-section.collapsed .section-content {
-     display: none;
+#canvas-container {
+   width: 100%;
+ height: auto;
+
+   overflow: hidden;
+
+
 }
 
-/* Floating dragged section */
-.sidebar-section.floating {
-     position: absolute;
-     z-index: 2000;
-     pointer-events: auto;
-     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-     transition: none;
+canvas {
+
+     transform-origin: center center;
+     /* scale relative to top-left */
 }
