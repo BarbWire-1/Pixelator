@@ -1,4 +1,4 @@
-import { Colors } from "../Pixelator_Concept/Colors.js";
+import {Colors} from "./Colors.js"
 // TODO test hashing colorStrings - last flawed as mac too slow
 //=========================
 // PALETTE MANAGER
@@ -100,8 +100,7 @@ export class PaletteManager {
 	}
 
 	selectSwatch(swatch) {
-		if (!this.selectedSwatch) return null;
-
+		if (this.selectedSwatch)
 		this.selectedSwatch.div.classList.remove("selected");
 		swatch.div.classList.add("selected");
 		this.selectedSwatch = swatch;
