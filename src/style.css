@@ -523,5 +523,6 @@ input[type="number"]::-webkit-outer-spin-button {
      /* always fills parent width */
      box-sizing: border-box;
      /* include padding/border */
-     color: #4b4b4b53
+    
+     color: #eee
 }

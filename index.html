@@ -70,14 +70,25 @@
                </div>
           </div>
 
-          <!-- LOGS SECTION -->
-          <div class="sidebar-section" title="View application logs">
-               <h3 title="Click to collapse/expand or drag this section">Logs</h3>
+
+
+          <!-- TOOLS SECTION -->
+          <div class="sidebar-section" title="Select drawing tools and modes">
+               <h3 title="Click to collapse/expand or drag this section">Drawing Tools</h3>
                <div class="section-content">
-                    <label style="color:limegreen; font-family:monospace;" title="Toggle logs display">
-                         <input type="checkbox" id="show-logs-checkbox" checked> Show Logs
-                    </label>
-                    <div id="log-panel" title="Log output">LOGS</div>
+                    <div id="controls">
+                         <label title="Use brush"><input type="radio" name="toolMode" value="brush" checked> Brush</label>
+                         <label title="Use eraser"><input type="radio" name="toolMode" value="eraser"> Eraser</label>
+
+                         <select id="modeSelect" title="Choose drawing mode">
+                              <option value="N" title="Normal mode">Normal</option>
+                              <option value="H" title="Horizontal Mirror">Horizontal Mirror</option>
+                              <option value="V" title="Vertical Mirror">Vertical Mirror</option>
+                              <option value="B" title="Mirror Both H+V">Both H+V</option>
+                              <option value="D" title="Diagonal mirror">Diagonal</option>
+                         </select>
+                         <div id="display" title="Tool preview"></div>
+                    </div>
                </div>
           </div>
 
@@ -102,25 +113,19 @@
                </div>
           </div>
 
-          <!-- TOOLS SECTION -->
-          <div class="sidebar-section" title="Select drawing tools and modes">
-               <h3 title="Click to collapse/expand or drag this section">Tools</h3>
-               <div class="section-content">
-                    <div id="controls">
-                         <label title="Use brush"><input type="radio" name="toolMode" value="brush" checked> Brush</label>
-                         <label title="Use eraser"><input type="radio" name="toolMode" value="eraser"> Eraser</label>
 
-                         <select id="modeSelect" title="Choose drawing mode">
-                              <option value="N" title="Normal mode">Normal</option>
-                              <option value="H" title="Horizontal Mirror">Horizontal Mirror</option>
-                              <option value="V" title="Vertical Mirror">Vertical Mirror</option>
-                              <option value="B" title="Mirror Both H+V">Both H+V</option>
-                              <option value="D" title="Diagonal mirror">Diagonal</option>
-                         </select>
-                         <div id="display" title="Tool preview"></div>
-                    </div>
+          <!-- LOGS SECTION -->
+          <div class="sidebar-section" title="View application logs">
+               <h3 title="Click to collapse/expand or drag this section">Logs</h3>
+               <div class="section-content">
+                    <label style="color:limegreen; font-family:monospace;" title="Toggle logs display">
+                         <input type="checkbox" id="show-logs-checkbox" checked> Show Logs
+                    </label>
+                    <div id="log-panel" title="Log output">LOGS</div>
                </div>
           </div>
+
+
      </div>
 
 
