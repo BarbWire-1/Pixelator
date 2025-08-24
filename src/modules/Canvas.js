@@ -367,7 +367,7 @@ export class CanvasManager {
 			maxY = Math.max(maxY, y);
 		});
 		this.ctx.strokeStyle = color;
-		this.ctx.lineWidth = 2;
+		this.ctx.lineWidth = .5;
 		this.ctx.strokeRect(minX - 0.5, minY - 0.5, maxX - minX + 1, maxY - minY + 1);
 		this.ctx.setLineDash([]);
 		this.log(`Bounding box drawn for ${pixels.length} pixels`);
