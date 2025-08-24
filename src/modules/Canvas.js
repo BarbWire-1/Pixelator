@@ -356,22 +356,78 @@ export class CanvasManager {
 
 	drawBoundingBox(pixels, color = "limegreen") {
 		if (!pixels.length) return;
+
 		let minX = this.canvas.width, maxX = -1, minY = this.canvas.height, maxY = -1;
+		const coords = [];
+
 		pixels.forEach((p) => {
 			const idx = p.index / 4;
 			const x = idx % this.canvas.width;
 			const y = Math.floor(idx / this.canvas.width);
+			coords.push({ x, y });
 			minX = Math.min(minX, x);
 			maxX = Math.max(maxX, x);
 			minY = Math.min(minY, y);
 			maxY = Math.max(maxY, y);
 		});
+
+		// draw bounding box
 		this.ctx.strokeStyle = color;
-		this.ctx.lineWidth = .5;
+		this.ctx.lineWidth = 0.5;
 		this.ctx.strokeRect(minX - 0.5, minY - 0.5, maxX - minX + 1, maxY - minY + 1);
 		this.ctx.setLineDash([]);
 		this.log(`Bounding box drawn for ${pixels.length} pixels`);
-	}
+
+		//TODO - the idea is an overlay fading in and out, but I do not really like it _TEST
+// 		const backup = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+//
+// 		let step = 0;
+// 		let increasing = true;
+// 		const steps =4;
+// 		let animationId;
+//
+// 		const animate = () => {
+//
+// 			this.ctx.putImageData(backup, 0, 0);
+//
+// 			const opacity = increasing ? step / steps : 1 - step / steps;
+//
+// 			// draw overlay per pixel
+// 			pixels.forEach(p => {
+// 				const idx = p.index;
+// 				const r = backup.data[ idx ];
+// 				const g = backup.data[ idx + 1 ];
+// 				const b = backup.data[ idx + 2 ];
+//
+// 				// complementary color
+// 				const cr = 255 - r;
+// 				const cg = 255 - g;
+// 				const cb = 255 - b;
+//
+// 				this.ctx.fillStyle = `rgba(${cr},${cg},${cb},${opacity / 4})`;
+// 				const x = idx / 4 % this.canvas.width;
+// 				const y = Math.floor(idx / 4 / this.canvas.width);
+// 				this.ctx.fillRect(x, y, 1, 1);
+// 			});
+//
+// 			step++;
+// 			if (step <= steps) {
+// 				animationId = requestAnimationFrame(animate);
+// 			} else if (increasing) {
+// 				step = 0;
+// 				increasing = false;
+// 				animationId = requestAnimationFrame(animate);
+// 			} else {
+// 				// final cleanup
+// 				this.ctx.putImageData(backup, 0, 0);
+// 				cancelAnimationFrame(animationId);
+// 			}
+// 		};
+//
+// 		animate();
+//
+ 	}
+
 }
 
 
