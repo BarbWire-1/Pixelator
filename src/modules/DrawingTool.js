@@ -2,21 +2,20 @@
 MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
-// TODO this draws without being selected
-import { snapshot } from '../main.js'
+import { snapshot } from '../main.js';
+
 export class DrawingTool {
-	constructor (canvasManager, colorPicker, modeSelect, displayEl) {
-		this.cm = canvasManager; // store reference to CanvasManager
-		this.canvas = canvasManager.canvas;
-		this.ctx = canvasManager.ctx;
+	constructor (cm, colorPicker, modeSelect, displayEl) {
+		this.cm = cm;
+		this.canvas = cm.canvas;
+		this.ctx = cm.ctx;
 		this.colorPicker = colorPicker;
 		this.modeSelect = modeSelect;
 		this.displayEl = displayEl;
-		this.tileSize = this.cm.tileSize;
+		this.tileSize = cm.tileSize;
 
 		this.drawing = false;
 		this.start = null;
-
 		this.currentColor = { r: 0, g: 0, b: 0 };
 		this.mode = "N";
 		this.isEraser = false;
@@ -25,7 +24,9 @@ export class DrawingTool {
 		this.updateDisplay();
 	}
 
-
+	// ----------------------------
+	// Mouse / Input Handling
+	// ----------------------------
 	bindEvents() {
 		this.canvas.addEventListener("mousedown", e => this.startDraw(e));
 		this.canvas.addEventListener("mousemove", e => this.drawMove(e));
@@ -38,12 +39,6 @@ export class DrawingTool {
 				this.updateDisplay();
 			});
 		}
-
-
-	}
-
-	updateDisplay() {
-		this.displayEl.textContent = `Mode: ${this.mode} | Color: ${this.isEraser ? "Eraser" : this.colorPicker.value}`;
 	}
 
 	getMouseTile(e) {
@@ -51,35 +46,37 @@ export class DrawingTool {
 		const scaleX = this.canvas.width / rect.width;
 		const scaleY = this.canvas.height / rect.height;
 
-		const x = Math.floor((e.clientX - rect.left) * scaleX / this.cm.tileSize);
-		const y = Math.floor((e.clientY - rect.top) * scaleY / this.cm.tileSize);
+		const x = Math.floor((e.clientX - rect.left) * scaleX / this.tileSize);
+		const y = Math.floor((e.clientY - rect.top) * scaleY / this.tileSize);
 
 		return { x, y };
 	}
 
 	getActiveTool() {
 		const selected = document.querySelector('input[name="toolMode"]:checked');
-		if (!selected) return null; // nothing selected
-		return selected.value; // "brush" or "eraser"
+		return selected ? selected.value : null;
 	}
+
+	// ----------------------------
+	// Drawing / Mouse Actions
+	// ----------------------------
 	startDraw(e) {
 		const tool = this.getActiveTool();
-		if (!tool) return; // no tool selected, don't start drawing
+		if (!tool) return;
 
-		// Update color on draw start
-		const hex = this.colorPicker.value;
-		this.currentColor = {
-			r: parseInt(hex.substr(1, 2), 16),
-			g: parseInt(hex.substr(3, 2), 16),
-			b: parseInt(hex.substr(5, 2), 16),
-		};
-		this.isEraser = this.isEraser; // keep current tool
+		const { x, y } = this.getMouseTile(e);
+		this.updateCurrentColor();
+
+		if (tool === "fillRegion") {
+			this.floodFillTile(x * this.tileSize, y * this.tileSize);
+			snapshot("Flood Fill");
+			return;
+		}
 
 		this.drawing = true;
-		this.start = this.getMouseTile(e);
+		this.start = { x, y };
 		this.drawLine(this.start, this.start);
 	}
-
 
 	drawMove(e) {
 		if (!this.drawing) return;
@@ -92,14 +89,100 @@ export class DrawingTool {
 		if (!this.drawing) return;
 		this.drawing = false;
 		this.start = null;
-		snapshot("Draw"); // record the completed stroke
+		snapshot("Draw");
 	}
 
-	drawLine(p0, p1) {
-		const pixels = this.bresenham(p0.x, p0.y, p1.x, p1.y);
-		pixels.forEach(({ x, y }) => {
-			this.applyTile(x, y);
+	// ----------------------------
+	// Color Handling
+	// ----------------------------
+	updateCurrentColor() {
+		const hex = this.colorPicker.value;
+		this.currentColor = {
+			r: parseInt(hex.substr(1, 2), 16),
+			g: parseInt(hex.substr(3, 2), 16),
+			b: parseInt(hex.substr(5, 2), 16),
+		};
+	}
+
+	// ----------------------------
+	// Pixel Operations
+	// ----------------------------
+	getPixelColor(x, y) {
+		const layer = this.cm.activeLayer;
+		const idx = (y * layer.width + x) * 4;
+		const d = layer.imageData.data;
+		return {
+			r: d[ idx ],
+			g: d[ idx + 1 ],
+			b: d[ idx + 2 ],
+			a: d[ idx + 3 ]
+		};
+	}
+
+	setPixel(x, y, color, alpha = 255) {
+		const layer = this.cm.activeLayer;
+		//if (!layer || x < 0 || y < 0 || x >= layer.width || y >= layer.height) return;
+		const idx = (y * layer.width + x) * 4;
+		const d = layer.imageData.data;
+		d[ idx ] = color.r;
+		d[ idx + 1 ] = color.g;
+		d[ idx + 2 ] = color.b;
+		d[ idx + 3 ] = alpha;
+	}
+
+	applyTile(tx, ty, color = this.currentColor, alpha = 255) {
+		const ts = this.tileSize;
+		for (let y = 0; y < ts; y++) {
+			for (let x = 0; x < ts; x++) {
+				this.setPixel(tx * ts + x, ty * ts + y, color, alpha);
+			}
+		}
+		this.applyMirrors(tx, ty, color, alpha);
+		this.cm.redraw();
+	}
+
+	applyMirrors(tx, ty, color, alpha) {
+		const layer = this.cm.activeLayer;
+
+		const cols = Math.floor(layer.width / this.tileSize);
+		const rows = Math.floor(layer.height / this.tileSize);
+		// store the commands to set "pixels"
+		const mirrors = [];
+
+		// Push mirrored coordinates based on mode
+		switch (this.mode) {
+			case "H":
+				mirrors.push({ tx, ty: rows - ty - 1 });
+				break;
+			case "V":
+				mirrors.push({ tx: cols - tx - 1, ty });
+				break;
+			case "B":
+				mirrors.push({ tx, ty: rows - ty - 1 });
+				mirrors.push({ tx: cols - tx - 1, ty });
+				mirrors.push({ tx: cols - tx - 1, ty: rows - ty - 1 });
+				break;
+			case "D":
+				mirrors.push({ tx: cols - tx - 1, ty: rows - ty - 1 });
+				break;
+		}
+
+		// Apply mirrored tiles
+		mirrors.forEach(m => {
+			for (let y = 0; y < this.tileSize; y++) {
+				for (let x = 0; x < this.tileSize; x++) {
+					this.setPixel(m.tx * this.tileSize + x, m.ty * this.tileSize + y, color, alpha);
+				}
+			}
 		});
+	}
+
+
+	// ----------------------------
+	// Line Drawing
+	// ----------------------------
+	drawLine(p0, p1) {
+		this.bresenham(p0.x, p0.y, p1.x, p1.y).forEach(({ x, y }) => this.applyTile(x, y));
 	}
 
 	bresenham(x0, y0, x1, y1) {
@@ -118,70 +201,50 @@ export class DrawingTool {
 		return pixels;
 	}
 
-	applyTile(tx, ty) {
-		if (!this.cm.activeLayer) return;
+	// ----------------------------
+	// Flood Fill
+	// ----------------------------
+	floodFillTile(startX, startY) {
 		const layer = this.cm.activeLayer;
-		const data = layer.imageData.data;
-		const size = this.cm.tileSize;
+		const width = layer.width;
+		const height = layer.height;
+		const stack = [ { x: startX, y: startY } ];
+		const visited = new Set();
+		const newColor = this.currentColor;
 
-		const wTiles = Math.floor(layer.width / size);
-		const hTiles = Math.floor(layer.height / size);
+		const startColor = this.getPixelColor(startX, startY);
 
-		const setPixel = (x, y, color, alpha = 255) => {
-			if (x < 0 || x >= layer.width || y < 0 || y >= layer.height) return;
-			const idx = (y * layer.width + x) * 4;
-			data[ idx ] = color.r;
-			data[ idx + 1 ] = color.g;
-			data[ idx + 2 ] = color.b;
-			data[ idx + 3 ] = alpha;
-		};
+		while (stack.length) {
+			const { x, y } = stack.pop();
+			const key = `${x},${y}`;
+			if (visited.has(key)) continue;
+			visited.add(key);
 
-		const color = this.isEraser ? { r: 0, g: 0, b: 0 } : this.currentColor;
-		const alpha = this.isEraser ? 0 : 255;
+			if (x < 0 || y < 0 || x >= width || y >= height) continue;
 
-		// Fill main tile
-		for (let y = 0; y < size; y++) {
-			for (let x = 0; x < size; x++) {
-				setPixel(tx * size + x, ty * size + y, color, alpha);
-			}
+			const c = this.getPixelColor(x, y);
+			if (c.r !== startColor.r || c.g !== startColor.g || c.b !== startColor.b) continue;
+
+			this.setPixel(x, y, newColor, 255);
+
+			stack.push({ x: x + 1, y });
+			stack.push({ x: x - 1, y });
+			stack.push({ x, y: y + 1 });
+			stack.push({ x, y: y - 1 });
 		}
-
-
-		const mirrors = [];
-
-		switch (this.mode) {
-			case "H":
-				mirrors.push({ tx, ty: hTiles - ty - 1 });
-				break;
-			case "V":
-				mirrors.push({ tx: wTiles - tx - 1, ty });
-				break;
-			case "B":
-				mirrors.push({ tx, ty: hTiles - ty - 1 });             // horizontal
-				mirrors.push({ tx: wTiles - tx - 1, ty });             // vertical
-				mirrors.push({ tx: wTiles - tx - 1, ty: hTiles - ty - 1 }); // both
-				break;
-			case "D":
-				mirrors.push({ tx: wTiles - tx - 1, ty: hTiles - ty - 1 });; // diagonal swap
-				break;
-		}
-		// Apply mirrored tiles
-		mirrors.forEach(({ tx, ty }) => {
-			for (let y = 0; y < size; y++) {
-				for (let x = 0; x < size; x++) {
-					setPixel(tx * size + x, ty * size + y, color, alpha);
-				}
-			}
-		});
 
 		this.cm.redraw();
 	}
 
-
-
-
+	// ----------------------------
+	// Misc
+	// ----------------------------
 	setEraser() {
 		this.isEraser = true;
 		this.updateDisplay();
+	}
+
+	updateDisplay() {
+		this.displayEl.textContent = `Mode: ${this.mode} | Color: ${this.isEraser ? "Eraser" : this.colorPicker.value}`;
 	}
 }
