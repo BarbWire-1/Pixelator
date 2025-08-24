@@ -51,7 +51,6 @@ export class DrawingTool {
 
 		return { x, y };
 	}
-
 	getActiveTool() {
 		const selected = document.querySelector('input[name="toolMode"]:checked');
 		return selected ? selected.value : null;
@@ -130,16 +129,33 @@ export class DrawingTool {
 		d[ idx + 3 ] = alpha;
 	}
 
+	// applyTile works for brush and eraser
 	applyTile(tx, ty, color = this.currentColor, alpha = 255) {
 		const ts = this.tileSize;
+		const layer = this.cm.activeLayer;
+		const d = layer.imageData.data;
+
 		for (let y = 0; y < ts; y++) {
 			for (let x = 0; x < ts; x++) {
-				this.setPixel(tx * ts + x, ty * ts + y, color, alpha);
+				const px = tx * ts + x;
+				const py = ty * ts + y;
+				if (px >= layer.width || py >= layer.height) continue;
+				const idx = (py * layer.width + px) * 4;
+
+				if (this.isEraser) {
+					d[ idx + 3 ] = 0; // erase
+				} else {
+					d[ idx ] = color.r;
+					d[ idx + 1 ] = color.g;
+					d[ idx + 2 ] = color.b;
+					d[ idx + 3 ] = alpha;
+				}
 			}
 		}
-		this.applyMirrors(tx, ty, color, alpha);
-		this.cm.redraw();
+
+
 	}
+
 
 	applyMirrors(tx, ty, color, alpha) {
 		const layer = this.cm.activeLayer;
@@ -182,8 +198,12 @@ export class DrawingTool {
 	// Line Drawing
 	// ----------------------------
 	drawLine(p0, p1) {
-		this.bresenham(p0.x, p0.y, p1.x, p1.y).forEach(({ x, y }) => this.applyTile(x, y));
+		// Bresenham line calculation
+		const pixels = this.bresenham(p0.x, p0.y, p1.x, p1.y);
+		// apply brush/eraser per tile
+		pixels.forEach(({ x, y }) => this.applyTile(x, y));
 	}
+
 
 	bresenham(x0, y0, x1, y1) {
 		const pixels = [];
@@ -204,37 +224,49 @@ export class DrawingTool {
 	// ----------------------------
 	// Flood Fill
 	// ----------------------------
-	floodFillTile(startX, startY) {
+	floodFillTile(startTx, startTy) {
 		const layer = this.cm.activeLayer;
-		const width = layer.width;
-		const height = layer.height;
-		const stack = [ { x: startX, y: startY } ];
+		const width = Math.floor(layer.width / this.tileSize);
+		const height = Math.floor(layer.height / this.tileSize);
+		const stack = [ { x: startTx, y: startTy } ];
 		const visited = new Set();
 		const newColor = this.currentColor;
 
-		const startColor = this.getPixelColor(startX, startY);
+		// sample start color once
+		const startColor = this.getPixelColor(startTx * this.tileSize, startTy * this.tileSize);
+
+		const getTileColor = (tx, ty) => {
+			const px = tx * this.tileSize;
+			const py = ty * this.tileSize;
+			return this.getPixelColor(px, py);
+		};
 
 		while (stack.length) {
-			const { x, y } = stack.pop();
-			const key = `${x},${y}`;
+			const { x: tx, y: ty } = stack.pop();
+			const key = `${tx},${ty}`;
 			if (visited.has(key)) continue;
 			visited.add(key);
 
-			if (x < 0 || y < 0 || x >= width || y >= height) continue;
+			if (tx < 0 || ty < 0 || tx >= width || ty >= height) continue;
 
-			const c = this.getPixelColor(x, y);
+			const c = getTileColor(tx, ty);
+
 			if (c.r !== startColor.r || c.g !== startColor.g || c.b !== startColor.b) continue;
 
-			this.setPixel(x, y, newColor, 255);
+			this.applyTile(tx, ty, newColor, 255);
 
-			stack.push({ x: x + 1, y });
-			stack.push({ x: x - 1, y });
-			stack.push({ x, y: y + 1 });
-			stack.push({ x, y: y - 1 });
+			// push 4-neighbours
+			stack.push({ x: tx + 1, y: ty });
+			stack.push({ x: tx - 1, y: ty });
+			stack.push({ x: tx, y: ty + 1 });
+			stack.push({ x: tx, y: ty - 1 });
 		}
 
+		// only redraw once at the end
 		this.cm.redraw();
 	}
+
+
 
 	// ----------------------------
 	// Misc
