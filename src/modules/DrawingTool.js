@@ -75,7 +75,7 @@ export class DrawingTool {
 		if (tool === "fillRegion") {
 			this.drawing = false;
 			this.floodFillTile(x, y);
-			snapshot("Flood Fill");
+
 			return;
 		}
 
@@ -109,6 +109,7 @@ export class DrawingTool {
 			g: parseInt(hex.substr(3, 2), 16),
 			b: parseInt(hex.substr(5, 2), 16),
 		};
+		//snapshot("Color Changed");
 	}
 
 	// ----------------------------
@@ -288,5 +289,6 @@ export class DrawingTool {
 
 	updateDisplay() {
 		this.displayEl.textContent = `Mode: ${this.mode} | Color: ${this.isEraser ? "Eraser" : this.colorPicker.value}`;
+
 	}
 }
