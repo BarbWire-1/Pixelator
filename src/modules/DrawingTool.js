@@ -4,9 +4,7 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
 import { snapshot } from '../main.js';
 
-// !!! WARNING !!!
-// This function uses TILE COORDINATES (not pixels).
-// All inputs and outputs are tile indexes, not raw canvas pixels.
+// !!! CAREFUL: THIS FUNCTION USES TILE INDICES, NOT PIXEL COORDINATES
 // Mixing these up will silently break drawing & fill.
 // Spent HOURS in the rabbit hole on this one!
 
