@@ -231,8 +231,8 @@ export class CanvasManager {
 	drawGrid() {
 	//	if (!this.activeLayer) return;
 		const ctx = this.ctx;
-		const width = this.activeLayer.width;
-		const height = this.activeLayer.height;
+		const width = this.canvas.width;
+		const height = this.canvas.height;
 		const ts = this.tileSize;
 
 		ctx.strokeStyle = "#4b4b4b";

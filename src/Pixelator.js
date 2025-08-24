@@ -114,9 +114,10 @@ export function initPixelator() {
 	}
 
 	function setupTileAndColorInputs() {
-		elements.tileSizeInput.addEventListener("change", (e) => {
+		elements.tileSizeInput.addEventListener("input", (e) => {
 			cm.tileSize = parseInt(e.target.value, 10) || 1;
 			tool.tileSize = cm.tileSize;
+			cm.redraw()
 
 		});
 		elements.colorCountInput.addEventListener("change", (e) => {
