@@ -13,128 +13,135 @@
 
 <body>
 
-<div class="app-container">
+     <div class="app-container">
 
-<!-- CANVAS WORKSPACE -->
-     <div id="canvas-container">
-          <div id="canvas-wrapper">
-               <canvas id="canvas"></canvas>
+          <!-- CANVAS WORKSPACE -->
+          <div id="canvas-container">
+               <div id="canvas-wrapper">
+                    <canvas id="canvas"></canvas>
+               </div>
           </div>
+
+          
+          <!-- RESIZER -->
+          <div id="resizer" class="resizer"></div>
+          <!-- SIDEBAR -->
+          <div id="sidebar"
+               title="Pixelation is the primary purpose. Using a tileSize of 1 for full image quantization can be slow on large images.">
+
+
+               <!-- File SECTION -->
+               <div class="sidebar-section" title="Load an image to start pixelating">
+                    <h3 title="Click to collapse/expand or drag this section">File</h3>
+                    <div class="section-content">
+                         <input type="file" id="raw-image-input" accept="image/*" class="file-btn"
+                              title="Select an image file">
+
+                         <button id="downloadBtn">Download Image</button>
+                    </div>
+               </div>
+
+               <!-- HISTORY SECTION -->
+               <div class="sidebar-section" title="Undo or redo your actions">
+                    <h3 title="Click to collapse/expand or drag this section">History</h3>
+                    <div class="section-content">
+                         <button id="undoBtn" title="Undo last action">Undo</button>
+                         <button id="redoBtn" title="Redo last undone action">Redo</button>
+                    </div>
+               </div>
+
+               <!-- SETTINGS & APPLY SECTION -->
+               <div class="sidebar-section" title="Adjust pixelation settings and apply">
+                    <h3 title="Click to collapse/expand or drag this section">Settings & Apply</h3>
+                    <div class="section-content">
+                         <div class="label-input">
+                              <label for="kMeans-iter" title="Number of kMeans iterations">kMeans Iter:</label>
+                              <input type="number" id="kMeans-iter" value="1" min="1" max="50" step="1"
+                                   title="Set kMeans iterations">
+                         </div>
+                         <div class="label-input">
+                              <label for="tile-size-input" title="Size of each tile">Tile Size:</label>
+                              <input type="number" id="tile-size-input" value="1" min="1" title="Set tile size">
+                         </div>
+                         <div class="label-input">
+                              <label for="color-count-input" title="Number of colors to use">Colors:</label>
+                              <input type="number" id="color-count-input" value="16" min="2" max="256"
+                                   title="Set number of colors">
+                         </div>
+                         <label title="Toggle grid overlay"><input type="checkbox" id="toggleGrid"> Show Grid</label>
+                         <button id="quantize-tile-btn" disabled title="Quantize and tile the image">Quantize &
+                              Tile</button>
+                         <input type="range" id="zoom" min=".1" max="3" step=".1" value="1" title="Zoom level">
+                    </div>
+               </div>
+
+
+
+               <!-- TOOLS SECTION -->
+               <div class="sidebar-section" title="Select drawing tools and modes">
+                    <h3 title="Click to collapse/expand or drag this section">Drawing Tools</h3>
+                    <div class="section-content">
+                         <div id="controls">
+                              <label title="Use brush"><input type="radio" name="toolMode" value="brush"> Brush</label>
+                              <label title="Use eraser"><input type="radio" name="toolMode" value="eraser">
+                                   Eraser</label>
+                              <label><input type="radio" name="toolMode" value="fillRegion"> Flood Fill</label>
+
+
+                              <select id="modeSelect" title="Choose drawing mode">
+                                   <option value="N" title="Normal mode">Normal</option>
+                                   <option value="H" title="Horizontal Mirror">Horizontal Mirror</option>
+                                   <option value="V" title="Vertical Mirror">Vertical Mirror</option>
+                                   <option value="B" title="Mirror Both H+V">Both H+V</option>
+                                   <option value="D" title="Diagonal mirror">Diagonal</option>
+                              </select>
+                              <div id="display" title="Tool preview"></div>
+                         </div>
+                    </div>
+               </div>
+
+               <!-- COLORS / PALETTE SECTION -->
+               <div class="sidebar-section" title="Create and edit your color palette">
+                    <h3 title="Click to collapse/expand or drag this section">Colors & Palette</h3>
+                    <div class="section-content">
+                         <button id="createPalette" title="Create a new color palette">Create Palette</button>
+                         <button id="eraseBtn" title="Erase the selected color">Erase Selected Color</button>
+                         <input type="color" id="colorPicker" class="circle-picker" value="#ff0000"
+                              title="Pick a color">
+                         <div id="hexDisplay" title="Click to copy"
+                              style="display: flex; justify-content: space-between; width: 95%; border: 1px solid #cccccc1f; padding: 5px;">
+                              <span id="hexValue">#ff0000</span>
+                              <span id="copyLabel">Copy to Clipboard</span>
+                         </div>
+
+
+
+
+                         <div id="color-palette" title="Palette display"></div>
+                         <div class="swatches" id="swatchesContainer" title="Saved color swatches"></div>
+                    </div>
+               </div>
+
+
+               <!-- LOGS SECTION -->
+               <div class="sidebar-section" title="View application logs">
+                    <h3 title="Click to collapse/expand or drag this section">Logs</h3>
+                    <div class="section-content">
+                         <label style="color:limegreen; font-family:monospace;" title="Toggle logs display">
+                              <input type="checkbox" id="show-logs-checkbox" checked> Show Logs
+                         </label>
+                         <div id="log-panel" title="Log output">LOGS</div>
+                    </div>
+               </div>
+
+
+          </div>
+
+
+
+
+
      </div>
-<!-- RESIZER -->
-     <div id="resizer" class="resizer"></div>
-<!-- SIDEBAR -->
-     <div id="sidebar" title="Pixelation is the primary purpose. Using a tileSize of 1 for full image quantization can be slow on large images.">
-
-
-          <!-- File SECTION -->
-          <div class="sidebar-section" title="Load an image to start pixelating">
-               <h3 title="Click to collapse/expand or drag this section">File</h3>
-               <div class="section-content">
-                    <input type="file" id="raw-image-input" accept="image/*" class="file-btn" title="Select an image file">
-
-                    <button id="downloadBtn">Download Image</button>
-               </div>
-          </div>
-
-          <!-- HISTORY SECTION -->
-          <div class="sidebar-section" title="Undo or redo your actions">
-               <h3 title="Click to collapse/expand or drag this section">History</h3>
-               <div class="section-content">
-                    <button id="undoBtn" title="Undo last action">Undo</button>
-                    <button id="redoBtn" title="Redo last undone action">Redo</button>
-               </div>
-          </div>
-
-          <!-- SETTINGS & APPLY SECTION -->
-          <div class="sidebar-section" title="Adjust pixelation settings and apply">
-               <h3 title="Click to collapse/expand or drag this section">Settings & Apply</h3>
-               <div class="section-content">
-                    <div class="label-input">
-                         <label for="kMeans-iter" title="Number of kMeans iterations">kMeans Iter:</label>
-                         <input type="number" id="kMeans-iter" value="1" min="1" max="50" step="1"
-                              title="Set kMeans iterations">
-                    </div>
-                    <div class="label-input">
-                         <label for="tile-size-input" title="Size of each tile">Tile Size:</label>
-                         <input type="number" id="tile-size-input" value="1" min="1" title="Set tile size">
-                    </div>
-                    <div class="label-input">
-                         <label for="color-count-input" title="Number of colors to use">Colors:</label>
-                         <input type="number" id="color-count-input" value="16" min="2" max="256"
-                              title="Set number of colors">
-                    </div>
-                    <label title="Toggle grid overlay"><input type="checkbox" id="toggleGrid"> Show Grid</label>
-                    <button id="quantize-tile-btn" disabled title="Quantize and tile the image">Quantize & Tile</button>
-                    <input type="range" id="zoom" min=".1" max="3" step=".1" value="1" title="Zoom level">
-               </div>
-          </div>
-
-
-
-          <!-- TOOLS SECTION -->
-          <div class="sidebar-section" title="Select drawing tools and modes">
-               <h3 title="Click to collapse/expand or drag this section">Drawing Tools</h3>
-               <div class="section-content">
-                    <div id="controls">
-                         <label title="Use brush"><input type="radio" name="toolMode" value="brush" > Brush</label>
-                         <label title="Use eraser"><input type="radio" name="toolMode" value="eraser"> Eraser</label>
-                         <label><input type="radio" name="toolMode" value="fillRegion"> Flood Fill</label>
-
-
-                         <select id="modeSelect" title="Choose drawing mode">
-                              <option value="N" title="Normal mode">Normal</option>
-                              <option value="H" title="Horizontal Mirror">Horizontal Mirror</option>
-                              <option value="V" title="Vertical Mirror">Vertical Mirror</option>
-                              <option value="B" title="Mirror Both H+V">Both H+V</option>
-                              <option value="D" title="Diagonal mirror">Diagonal</option>
-                         </select>
-                         <div id="display" title="Tool preview"></div>
-                    </div>
-               </div>
-          </div>
-
-          <!-- COLORS / PALETTE SECTION -->
-          <div class="sidebar-section" title="Create and edit your color palette">
-               <h3 title="Click to collapse/expand or drag this section">Colors & Palette</h3>
-               <div class="section-content">
-                    <button id="createPalette" title="Create a new color palette">Create Palette</button>
-                    <button id="eraseBtn" title="Erase the selected color">Erase Selected Color</button>
-                    <input type="color" id="colorPicker" class="circle-picker" value="#ff0000" title="Pick a color">
-                    <div id="hexDisplay" title="Click to copy"
-                         style="display: flex; justify-content: space-between; width: 95%; border: 1px solid #cccccc1f; padding: 5px;">
-                         <span id="hexValue">#ff0000</span>
-                         <span id="copyLabel">Copy to Clipboard</span>
-                    </div>
-
-
-
-
-                    <div id="color-palette" title="Palette display"></div>
-                    <div class="swatches" id="swatchesContainer" title="Saved color swatches"></div>
-               </div>
-          </div>
-
-
-          <!-- LOGS SECTION -->
-          <div class="sidebar-section" title="View application logs">
-               <h3 title="Click to collapse/expand or drag this section">Logs</h3>
-               <div class="section-content">
-                    <label style="color:limegreen; font-family:monospace;" title="Toggle logs display">
-                         <input type="checkbox" id="show-logs-checkbox" checked> Show Logs
-                    </label>
-                    <div id="log-panel" title="Log output">LOGS</div>
-               </div>
-          </div>
-
-
-     </div>
-
-
-
-
-
-</div>
 
 </body>
 

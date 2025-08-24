@@ -187,7 +187,6 @@ export function initPixelator() {
 
 
 
-
 	function setupUndoRedo() {
 		elements.undoBtn.addEventListener("click", () => {
 			const state = history.undo();
@@ -211,6 +210,7 @@ export function initPixelator() {
 	setupImageLoader();
 	setupZoom();
 	setupUndoRedo();
+
 
 	// JUST spliced in to log the quantization stuff in panel
 

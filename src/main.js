@@ -5,6 +5,7 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 import { initPixelator } from "./Pixelator.js";
 import "./ui-ux.js"
 
+
 const pixelStuff = initPixelator();
 const { snapshot } = pixelStuff;
 
@@ -42,3 +43,21 @@ document.addEventListener('mouseup', () => {
 	isResizing = false;
 	document.body.style.cursor = '';
 });
+
+// // wheel zoom to canvas container - LOL
+// const container = document.getElementById("canvas-container");
+// const canvas = document.getElementById("canvas");
+//
+// container.addEventListener("wheel", (e) => {
+// 	e.preventDefault(); // prevent from scrolling - STRANGE, but really SPOOKY without
+// 	const zoomStep = 0.01;
+// 	let scale = parseFloat(canvas.style.transform.replace(/scale\((.+)\)/, "$1")) || 1;
+//
+// 	if (e.deltaY < 0) {
+// 		scale += zoomStep; // zoom in
+// 	} else {
+// 		scale = Math.max(0.01, scale - zoomStep); // zoom out, min 0.1
+// 	}
+//
+// 	canvas.style.transform = `scale(${scale})`;
+// }, { passive: false });
