@@ -119,7 +119,7 @@ export class PaletteManager {
 
 		const swatch = this.swatches.find((s) => s.div === div);
 
-		swatch &&this.selectSwatch(swatch);
+		swatch && this.selectSwatch(swatch);
 	}
 
 	deselectSwatch() {
@@ -144,7 +144,7 @@ export class PaletteManager {
 		const { r, g, b } = swatch;
 		const hex = this.colorPicker.value = this.rgbToHex(r, g, b);
 
-		this.updateHex(hex )
+		this.updateHex(hex)
 
 	}
 
@@ -152,10 +152,10 @@ export class PaletteManager {
 
 
 
-		// update the hex programmatically
-		updateHex(hex) {
-	hexValue.textContent = hex;
-}
+	// update the hex programmatically
+	updateHex(hex) {
+		hexValue.textContent = hex;
+	}
 
 
 	getSelectedColor() {

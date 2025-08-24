@@ -2,8 +2,8 @@
 MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
-
-import { snapshot } from './main.js'
+// TODO this draws without being selected
+import { snapshot } from '../main.js'
 export class DrawingTool {
 	constructor (canvasManager, colorPicker, modeSelect, displayEl) {
 		this.cm = canvasManager; // store reference to CanvasManager
@@ -57,8 +57,15 @@ export class DrawingTool {
 		return { x, y };
 	}
 
-
+	getActiveTool() {
+		const selected = document.querySelector('input[name="toolMode"]:checked');
+		if (!selected) return null; // nothing selected
+		return selected.value; // "brush" or "eraser"
+	}
 	startDraw(e) {
+		const tool = this.getActiveTool();
+		if (!tool) return; // no tool selected, don't start drawing
+
 		// Update color on draw start
 		const hex = this.colorPicker.value;
 		this.currentColor = {

@@ -3,10 +3,10 @@ MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
 
-import { DrawingTool } from "./DrawingTool.js";
-import { CanvasManager } from "./Canvas.js";
-import { PaletteManager } from "./PaletteManager.js";
-import { HistoryManager, debug } from "./HistoryManager.js";
+import { DrawingTool } from "./modules/DrawingTool.js";
+import { CanvasManager } from "./modules/Canvas.js";
+import { PaletteManager } from "./modules/PaletteManager.js";
+import { HistoryManager, debug } from "./modules/HistoryManager.js";
 
 export function initPixelator() {
 	// --- DOM Elements ---
