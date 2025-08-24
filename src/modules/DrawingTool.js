@@ -4,6 +4,13 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
 import { snapshot } from '../main.js';
 
+// !!! WARNING !!!
+// This function uses TILE COORDINATES (not pixels).
+// All inputs and outputs are tile indexes, not raw canvas pixels.
+// Mixing these up will silently break drawing & fill.
+// Spent HOURS in the rabbit hole on this one!
+
+
 export class DrawingTool {
 	constructor (cm, colorPicker, modeSelect, displayEl) {
 		this.cm = cm;
@@ -69,7 +76,7 @@ export class DrawingTool {
 		// in startDraw
 		if (tool === "fillRegion") {
 			this.drawing = false;
-			this.floodFillTile(x, y);   
+			this.floodFillTile(x, y);
 			snapshot("Flood Fill");
 			return;
 		}
