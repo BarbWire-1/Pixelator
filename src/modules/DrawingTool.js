@@ -66,8 +66,10 @@ export class DrawingTool {
 		const { x, y } = this.getMouseTile(e);
 		this.updateCurrentColor();
 
+		// in startDraw
 		if (tool === "fillRegion") {
-			this.floodFillTile(x * this.tileSize, y * this.tileSize);
+			this.drawing = false;
+			this.floodFillTile(x, y);   
 			snapshot("Flood Fill");
 			return;
 		}
@@ -89,6 +91,7 @@ export class DrawingTool {
 		this.drawing = false;
 		this.start = null;
 		snapshot("Draw");
+
 	}
 
 	// ----------------------------
@@ -202,6 +205,7 @@ export class DrawingTool {
 		const pixels = this.bresenham(p0.x, p0.y, p1.x, p1.y);
 		// apply brush/eraser per tile
 		pixels.forEach(({ x, y }) => this.applyTile(x, y));
+		this.cm.redraw();
 	}
 
 
@@ -225,46 +229,47 @@ export class DrawingTool {
 	// Flood Fill
 	// ----------------------------
 	floodFillTile(startTx, startTy) {
-		const layer = this.cm.activeLayer;
-		const width = Math.floor(layer.width / this.tileSize);
-		const height = Math.floor(layer.height / this.tileSize);
-		const stack = [ { x: startTx, y: startTy } ];
-		const visited = new Set();
-		const newColor = this.currentColor;
+    const layer = this.cm.activeLayer;
+    const width = Math.floor(layer.width / this.tileSize);
+    const height = Math.floor(layer.height / this.tileSize);
+    const stack = [ { x: startTx, y: startTy } ];
+    const visited = new Set();
+    const newColor = this.currentColor;
 
-		// sample start color once
-		const startColor = this.getPixelColor(startTx * this.tileSize, startTy * this.tileSize);
+    // sample start color once
+    const startColor = this.getPixelColor(startTx * this.tileSize, startTy * this.tileSize);
 
-		const getTileColor = (tx, ty) => {
-			const px = tx * this.tileSize;
-			const py = ty * this.tileSize;
-			return this.getPixelColor(px, py);
-		};
+    const getTileColor = (tx, ty) => {
+        const px = tx * this.tileSize;
+        const py = ty * this.tileSize;
+        return this.getPixelColor(px, py);
+    };
 
-		while (stack.length) {
-			const { x: tx, y: ty } = stack.pop();
-			const key = `${tx},${ty}`;
-			if (visited.has(key)) continue;
-			visited.add(key);
+    while (stack.length) {
+        const { x: tx, y: ty } = stack.pop();
+        const key = `${tx},${ty}`;
+        if (visited.has(key)) continue;
+        visited.add(key);
 
-			if (tx < 0 || ty < 0 || tx >= width || ty >= height) continue;
+        if (tx < 0 || ty < 0 || tx >= width || ty >= height) continue;
 
-			const c = getTileColor(tx, ty);
+        const c = getTileColor(tx, ty);
 
-			if (c.r !== startColor.r || c.g !== startColor.g || c.b !== startColor.b) continue;
+        if (c.r !== startColor.r || c.g !== startColor.g || c.b !== startColor.b) continue;
 
-			this.applyTile(tx, ty, newColor, 255);
+        this.applyTile(tx, ty, newColor, 255);
 
-			// push 4-neighbours
-			stack.push({ x: tx + 1, y: ty });
-			stack.push({ x: tx - 1, y: ty });
-			stack.push({ x: tx, y: ty + 1 });
-			stack.push({ x: tx, y: ty - 1 });
-		}
+        // push 4-neighbours
+        stack.push({ x: tx + 1, y: ty });
+        stack.push({ x: tx - 1, y: ty });
+        stack.push({ x: tx, y: ty + 1 });
+        stack.push({ x: tx, y: ty - 1 });
+    }
 
-		// only redraw once at the end
+    // only redraw once at the end
 		this.cm.redraw();
-	}
+		snapshot("Flood Fill");
+}
 
 
 
