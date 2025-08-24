@@ -15,9 +15,10 @@ export { snapshot };
 
 // TODO add a gif
 // TODO implement the copy to cb correct
+// TODO refactor all modules into Logic + exchangeable UI - decouple
 
-// TODO fix html structure and CSS
-// TODO implement sidebar resize
+// TODO implement Layer stack and logic, best in own Handler - use template for components
+// TODO REFACTOR CANVAS!!! : imageProcessing, canvasHandling, layer-management
 const resizer = document.getElementById('resizer');
 const sidebar = document.getElementById('sidebar');
 let isResizing = false;
