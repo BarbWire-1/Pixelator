@@ -3,7 +3,7 @@ MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
 // TODO update all UI inputs on snapshot change!!!!!!
-
+// tools, colorPicker and select not updated correctly, ramge???
 import { DrawingTool } from "./modules/DrawingTool.js";
 import { CanvasManager } from "./modules/Canvas.js";
 import { PaletteManager } from "./modules/PaletteManager.js";
@@ -58,7 +58,11 @@ export function initPixelator() {
 				}
 				: null,
 			palette: pm.getPaletteState(),
-			tool: { isEraser: tool.isEraser },
+			tool: {
+				mode: tool.mode,          // "N", "H", "V", "B", "D", or "fillRegion"
+				isEraser: tool.isEraser
+			},
+
 			tileSize: cm.tileSize,
 			colorCount: cm.colorCount,
 			toggleGrid: cm.toggleGrid,
@@ -102,12 +106,19 @@ export function initPixelator() {
 			elements.toggleGridCheckbox.checked = state.toggleGrid;
 			cm.redraw();
 		}
-		if (state.mode !== undefined) {
-			tool.isEraser = state.mode === "eraser";
+		// Restore tool
+		if (state.tool) {
+			tool.mode = state.tool.mode;
+			tool.isEraser = state.tool.isEraser;
 			tool.updateDisplay();
-			// update mode radios if you have them
+
+			// Update radio buttons
 			document.querySelectorAll('input[name="toolMode"]').forEach(radio => {
-				radio.checked = radio.value === state.mode;
+				if (radio.value === tool.mode || (tool.isEraser && radio.value === "eraser")) {
+					radio.checked = true;
+				} else {
+					radio.checked = false;
+				}
 			});
 		}
 		if (state.zoom !== undefined) {
