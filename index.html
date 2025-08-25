@@ -15,6 +15,36 @@
 
      <div class="app-container">
 
+
+          <div id="downloadModal">
+               <div class="modal-content">
+                    <h2>Download Image</h2>
+
+                    <div class="form-row">
+                         <label for="downloadWidth">Width:</label>
+                         <input id="downloadWidth" type="number" />
+                    </div>
+                    <div class="form-row">
+                         <label for="downloadHeight">Height:</label>
+                         <input id="downloadHeight" type="number" />
+                    </div>
+
+                    <div class="form-row">
+                         <label>
+                              <input id="lockAspect" type="checkbox" checked /> Maintain aspect ratio
+                         </label>
+                    </div>
+
+                    <div class="button-row">
+                         <button id="cancelDownload">Cancel</button>
+                         <button id="confirmDownload">Download</button>
+                    </div>
+               </div>
+          </div>
+
+
+
+
           <!-- CANVAS WORKSPACE -->
           <div id="canvas-container">
                <div id="canvas-wrapper">
@@ -22,7 +52,7 @@
                </div>
           </div>
 
-          
+
           <!-- RESIZER -->
           <div id="resizer" class="resizer"></div>
           <!-- SIDEBAR -->

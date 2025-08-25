@@ -9,6 +9,9 @@ import { DrawingTool } from "./modules/DrawingTool.js";
 import { CanvasManager } from "./modules/Canvas.js";
 import { PaletteManager } from "./modules/PaletteManager.js";
 import { HistoryManager, debug } from "./modules/HistoryManager.js";
+import { DimensionModal } from "./modules/ModalManager.js";
+
+import "./UI/resizer.js"
 
 export function initPixelator() {
 	// --- DOM Elements ---
@@ -38,10 +41,30 @@ export function initPixelator() {
 	const tool = new DrawingTool(cm, elements.colorPicker, elements.modeSelect, elements.displayEl);
 
 
+
+	// init once on page load
+	const downloadModal = new DimensionModal(
+		"downloadModal",
+		"downloadWidth",
+		"downloadHeight",
+		"lockAspect",
+		"cancelDownload",
+		"confirmDownload"
+	);
+
+
+
 	document.getElementById("downloadBtn")
 		.addEventListener('click', () => {
 			console.log("clicked dl")
-			cm.downloadImage()
+			// later, when user clicks download
+			downloadModal.open(
+				cm.rawImage?.width || cm.activeLayer.width,
+				cm.rawImage?.height || cm.activeLayer.height,
+				(targetW, targetH) => cm.downloadImage(targetW, targetH)
+			);
+
+			//cm.downloadImage()
 			snapshot("Image loaded")
 		})
 // 	// --- Snapshot / History ---
@@ -354,6 +377,13 @@ export function initPixelator() {
 	});
 	document.getElementById('kMeans-iter').addEventListener('change', (e) => cm.kMeansIterations = +e.target.value)
 	snapshot("Initial state");
+
+
+
+
+	//MORE MESSY ADDITIONS
+
+
 
 	// Return managers in case you need them outside
 	return { cm, pm, tool, history, snapshot };

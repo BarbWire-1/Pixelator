@@ -177,12 +177,14 @@ export class CanvasManager {
 
 	setContainerDimensions(img) {
 		const container = document.getElementById("canvas-container");
+
+		const margin = 100
 		const ratio = Math.min(
-			container.clientWidth / img.width,
+			container.clientWidth / img.width ,
 			container.clientHeight / img.height
 		);
-		const targetW = Math.round(img.width * ratio);
-		const targetH = Math.round(img.height * ratio);
+		const targetW = Math.round(img.width * ratio) - margin;
+		const targetH = Math.round(img.height * ratio) - margin;
 
 		this.dimensions = { width: targetW, height: targetH, ratio };
 		this.resizeCanvas(targetW, targetH);
@@ -232,21 +234,39 @@ export class CanvasManager {
 	// --------------------
 	// Download/export image
 	// --------------------
-	downloadImage() {
+
+	// triggers downloadModal to pass w,h
+	// initialised in Pixelator.js currently
+	downloadImage(targetWidth , targetHeight ) {
 		if (!this.activeLayer) return;
 
-		// build filename
 		const pixelated = this.tileSize > 1 ? "pixelated" : "original";
 		const colors = this.activeLayer.colors?.length ?? "full";
 		const filename = `canvas-${pixelated}-ts${this.tileSize}-c${colors}.png`;
-		// Create a temporary canvas to hold the current layer
-		const tempCanvas = document.createElement("canvas");
-		tempCanvas.width = this.activeLayer.width;
-		tempCanvas.height = this.activeLayer.height;
-		const tctx = tempCanvas.getContext("2d");
-		tctx.putImageData(this.activeLayer.imageData, 0, 0);
+		this._filename = filename;
 
-		// Convert canvas to a blob and trigger download
+		// Create temporary canvas at final size
+		const tempCanvas = document.createElement("canvas");
+		tempCanvas.width = targetWidth;
+		tempCanvas.height = targetHeight;
+		const tctx = tempCanvas.getContext("2d");
+
+		if (targetWidth === this.activeLayer.width && targetHeight === this.activeLayer.height) {
+			// no scaling needed
+			tctx.putImageData(this.activeLayer.imageData, 0, 0);
+		} else {
+			// scale properly
+			const origCanvas = document.createElement("canvas");
+			origCanvas.width = this.activeLayer.width;
+			origCanvas.height = this.activeLayer.height;
+			const octx = origCanvas.getContext("2d");
+			octx.putImageData(this.activeLayer.imageData, 0, 0);
+
+			// scale original onto final canvas
+			tctx.drawImage(origCanvas, 0, 0, targetWidth, targetHeight);
+		}
+
+		// Trigger download
 		tempCanvas.toBlob((blob) => {
 			if (!blob) return;
 			const url = URL.createObjectURL(blob);
@@ -257,10 +277,12 @@ export class CanvasManager {
 			a.click();
 			a.remove();
 			URL.revokeObjectURL(url);
+			this.log("IMAGE_DOWNLOADED");
+			this._filename = null;
 		}, "image/png");
-
-		this.log(`Image downloaded as "${filename}"`);
 	}
+
+
 
 
 	// --------------------
