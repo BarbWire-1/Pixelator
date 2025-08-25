@@ -181,7 +181,7 @@ export function initPixelator() {
 	function setupPaletteListeners() {
 		elements.eraseBtn.addEventListener("click", () => {
 			pm.eraseSelectedPixels();
-			snapshot("Erase selected swatch");
+			//snapshot("Erase selected swatch");
 		});
 
 		elements.createPaletteBtn.addEventListener("click", () => {

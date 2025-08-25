@@ -2,7 +2,34 @@
 MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
+// TODO SEPARATE DRAWING FROM LOGIC FROM LAYERING!!!!
+// TODO HOW to handle colorChanges to quantize new????
 
+// FULLY IMPLEMENT THIS
+export const messages = {
+	LOAD_IMAGE: (ctx) => `2 Image loaded: ${ctx.rawImage?.width}x${ctx.rawImage?.height}, scaled to ${ctx.dimensions?.width}x${ctx.dimensions?.height}`,
+	LOAD_IMAGE_COMPLETE: (ctx) => `Task "loadImage" completed in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
+	PREPARE_CANVAS: (ctx) => `Step 1 (prepare canvas) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
+	DRAW_IMAGE: (ctx) => `Step 2 (draw image) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
+	TEMP_CANVAS: (ctx) => `${ctx._stepName || "Temp Canvas"} done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
+	BASE_LAYER: (ctx) => `Step 3 (create base layer) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
+	QUANTIZATION_START: (ctx) => `Starting quantization and tiling with colorCount=${ctx.colorCount}, tileSize=${ctx.tileSize}`,
+	QUANTIZATION_DONE: (ctx) => `Step 2 (quantize in ${ctx.kMeansIterations} iterations) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
+	UNIQUE_COLORS: (ctx) => `Unique colors found: ${ctx._uniqueCount || 0}`,
+	PALETTE_LENGTH: (ctx) => `Palette length after quantization: ${ctx._paletteLength || 0}`,
+	MAP_LAYER: (ctx) => `Step 3&4 (map & upscale) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
+	PUSH_LAYER: (ctx) => `Step 5 (push layer & redraw) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
+	APPLY_QUANTIZE_COMPLETE: (ctx) => `Task "applyQuantizeAndTile" completed in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
+	PIXELS_ERASED: (ctx) => `Erased ${ctx._pixels?.length || 0} pixels`,
+	PIXELS_RECOLORED: (ctx) => {
+		const p = ctx._pixels || [];
+		return `Recolored ${p.length} pixels to rgb(${ctx._r},${ctx._g},${ctx._b})`;
+	},
+	BOUNDING_BOX_DRAWN: (ctx) => `Bounding box drawn for ${ctx._pixels?.length || 0} pixels`,
+	IMAGE_DOWNLOADED: (ctx) => `Image downloaded as "${ctx._filename || 'unknown'}"`,
+	RE_QUANTIZE: (ctx) => `Re-quantized using ${ctx._preservePalette ? 'existing palette' : ctx.colorCount + ' colors'}`
+};
+// => OPTIONAL USE RAW IMAGE, LAST IMAGE ???
 //=========================
 // LAYER CLASS
 //=========================
@@ -37,10 +64,32 @@ export class CanvasManager {
 
 		this.worker = null;
 		this.colorCount =16;
-
+		// Internal helpers for dynamic log data
+		this._taskStart = 0;
+		this._pixels = null;
+		this._r = this._g = this._b = 0;
+		this._filename = null;
+		this._stepName = "";
+		this._uniqueCount = 0;
+		this._paletteLength = 0;
+		this._preservePalette = false;
 
 	}
+	log2(key) {
+		if (!this.showLogs) return;
+		const now = performance.now();
+		const elapsed = ((now - this.startTime) / 1000).toFixed(3);
+		const messageFn = messages[ key ];
+		const message = typeof messageFn === "function" ? messageFn(this) : key;
+		this.logEntries.push({
+			time: new Date().toLocaleTimeString(),
+			elapsed: parseFloat(elapsed),
+			message
+		});
+	}
 
+	getLogs2() { return this.logEntries; }
+	clearLogs2() { this.logEntries = []; }
 	// create once
 	initWorker() {
 		if (!this.worker) {
@@ -120,7 +169,8 @@ export class CanvasManager {
 		this.createBaseLayer(targetW, targetH, imageData);
 
 		this.redraw();
-
+		this.log2("LOAD_IMAGE");
+		this.log2("LOAD_IMAGE_COMPLETE");
 		this.log(`Image loaded: ${img.width}x${img.height}, scaled to ${targetW}x${targetH}`);
 		this.log(`Task "loadImage" completed in ${(performance.now() - taskStart).toFixed(2)} ms`);
 	}
@@ -465,6 +515,43 @@ CanvasManager.prototype.setState = function (state) {
 	this.colorCount = state.colorCount;
 	this.toggleGrid = state.toggleGrid;
 	this.redraw();
+};
+CanvasManager.prototype.reQuantize = async function ({
+	useRaw = true,       // use rawImage or current layer
+	tileSize = this.tileSize,
+	colorCount = this.colorCount,
+	preservePalette = false
+} = {}) {
+	const sourceImg = useRaw ? this.rawImage : this.activeLayer;
+	if (!sourceImg) return;
+
+	// 1. Downscale
+	const tempCanvas = this.createTempCanvas(
+		sourceImg,
+		Math.ceil(this.dimensions.width / tileSize),
+		Math.ceil(this.dimensions.height / tileSize)
+	);
+
+	let clusteredData, palette;
+	if (preservePalette && this.activeLayer?.colors?.length) {
+		// 2a. Map pixels to existing palette
+		palette = this.activeLayer.colors;
+		clusteredData = mapPixelsToPalette(tempCanvas, palette);
+	} else {
+		// 2b. Quantize using KMeans
+		({ palette, clusteredData } = await this.runQuantizationInWorker(tempCanvas, colorCount));
+	}
+
+	// 3. Map & upscale
+	const layer = this.mapClusteredToLayer(clusteredData, this.dimensions.width, this.dimensions.height, tileSize);
+
+	// 4. Replace layer
+	this.layers.push(layer);
+	this.activeLayer = layer;
+	layer.colors = palette;
+	this.redraw();
+
+	this.log(`Re-quantized using ${preservePalette ? 'existing palette' : colorCount + ' colors'}`);
 };
 
 

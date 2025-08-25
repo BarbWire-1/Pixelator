@@ -3,8 +3,9 @@ MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
 
+import { snapshot } from "../main.js";
 import { Colors } from "./Colors.js"
-
+// TODO - move listeners OUT wire history in int
 //=========================
 // PALETTE MANAGER
 //=========================
@@ -183,6 +184,7 @@ export class PaletteManager {
 		if (!this.selectedSwatch) return;
 		this.cm.erasePixels(this.selectedSwatch.pixels);
 		this.selectedSwatch.div.classList.add("erased");
+		snapshot("Erase selected swatch");
 	}
 
 	recolorSelectedPixels(r, g, b) {
