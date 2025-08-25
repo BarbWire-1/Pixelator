@@ -350,7 +350,7 @@ export class CanvasManager {
 			data[ idx + 3 ] = 255;
 		});
 		log && this.log(`Recolored ${pixels.length} pixels to rgb(${r},${g},${b})`);
-		log && snapshot("Recolored")
+		
 	}
 
 	drawBoundingBox(pixels, color = "limegreen") {

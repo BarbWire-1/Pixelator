@@ -208,9 +208,9 @@ export class PaletteManager {
 		//sw.div.classList.remove("erased");
 
 		this.colorPicker.value = this.rgbToHex(r, g, b);
+		//this.cm.recolorPixels(this.selectedSwatch.pixels, r, g, b, false);
 		this.cm.recolorPixels(this.selectedSwatch.pixels, r, g, b);
-
-
+		// recolorPixels(pixels, r, g, b, log = true) 
 	}
 
 	//=========================

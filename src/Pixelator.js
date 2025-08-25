@@ -221,6 +221,16 @@ export function initPixelator() {
 
 		});
 
+		// final commit when released
+		elements.colorPicker.addEventListener("change", (e) => {
+			const hex = elements.colorPicker.value;
+			const r = parseInt(hex.substr(1, 2), 16);
+			const g = parseInt(hex.substr(3, 2), 16);
+			const b = parseInt(hex.substr(5, 2), 16);
+			pm.recolorSelectedPixels(r, g, b,true)
+			snapshot("Recolored");
+		});
+
 	}
 
 	function setupGridListener() {
