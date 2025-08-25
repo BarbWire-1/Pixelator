@@ -2,7 +2,9 @@
 MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
-export let DEBUG = false; 
+// anywhere early in your code, e.g., main.js
+window.DEBUG = false;
+
 
 export function debug(...args) {
 	if (!DEBUG) return;

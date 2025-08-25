@@ -3,6 +3,7 @@ MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
 // TODO update all UI inputs on snapshot change!!!!!!
+// TODO ADD A GET-/SETSTATE TO ALL MODULES INVOLVED
 // tools, colorPicker and select not updated correctly, ramge???
 import { DrawingTool } from "./modules/DrawingTool.js";
 import { CanvasManager } from "./modules/Canvas.js";
@@ -43,7 +44,7 @@ export function initPixelator() {
 			cm.downloadImage()
 			snapshot("Image loaded")
 		})
-	// --- Snapshot / History ---
+// 	// --- Snapshot / History ---
 	function snapshot(desc = "") {
 		const state = {
 			layer: cm.activeLayer
@@ -58,6 +59,7 @@ export function initPixelator() {
 				}
 				: null,
 			palette: pm.getPaletteState(),
+			// TODO HERE IS STH WRONG - also need upate select
 			tool: {
 				mode: tool.mode,          // "N", "H", "V", "B", "D", or "fillRegion"
 				isEraser: tool.isEraser
@@ -77,14 +79,25 @@ export function initPixelator() {
 
 	async function restoreState(state) {
 		if (state.layer) {
-			cm.resizeCanvas(state.layer.width, state.layer.height);
-			const target = cm.activeLayer.imageData;
-			target.data.set(state.layer.imageData.data);
+			// Replace activeLayer completely
+			cm.activeLayer = {
+				width: state.layer.width,
+				height: state.layer.height,
+				imageData: new ImageData(
+					new Uint8ClampedArray(state.layer.imageData.data),
+					state.layer.width,
+					state.layer.height
+				)
+			};
+			cm.resizeCanvas(cm.activeLayer.width, cm.activeLayer.height);
 			cm.redraw();
 		} else {
-			// No layer → clear the canvas
-			cm.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+			// Clear visible canvas without touching rawImage
+			cm.activeLayer &&  cm.activeLayer.imageData.data.fill(0);
+			cm.redraw();
+
 		}
+
 
 		// Restore palette and tool
 		pm.setPaletteState(state.palette);
@@ -130,6 +143,28 @@ export function initPixelator() {
 		debug("Inputs synced to history state");
 	}
 
+// 	function snapshot(desc = "") {
+// 		const state = {
+// 			canvas: cm.getState(),
+// 			palette: pm.getState(),
+// 			tool: tool.getState(),
+// 			zoom: elements.zoomInput.value,
+// 			desc
+// 		};
+// 		history.push(state);
+// 		debug("Snapshot taken:", desc);
+// 	}
+//
+// 	async function restoreState(state) {
+// 		cm.setState(state.canvas);
+// 		pm.setState(state.palette);
+// 		tool.setState(state.tool);
+//
+// 		elements.zoomInput.value = state.zoom;
+// 		elements.canvas.style.transform = `scale(${parseFloat(state.zoom)})`;
+//
+// 		debug("Inputs synced to history state");
+// 	}
 
 
 

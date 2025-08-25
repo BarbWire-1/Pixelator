@@ -238,3 +238,11 @@ export class PaletteManager {
 		return "#" + [ r, g, b ].map((x) => x.toString(16).padStart(2, "0")).join("");
 	}
 }
+// PaletteManager.js prototype augmentation
+PaletteManager.prototype.getState = function () {
+	return this.getPaletteState();
+};
+
+PaletteManager.prototype.setState = function (state) {
+	this.setPaletteState(state);
+};

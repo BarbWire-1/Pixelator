@@ -330,6 +330,7 @@ export class CanvasManager {
 		return palette;
 	}
 
+
 	// --------------------
 	// Pixel editing
 	// --------------------
@@ -429,6 +430,45 @@ export class CanvasManager {
  	}
 
 }
+
+//  HISTORY SUPPORT
+// CanvasManager.js prototype augmentation
+CanvasManager.prototype.getState = function () {
+	return {
+		activeLayer: this.activeLayer
+			? {
+				width: this.activeLayer.width,
+				height: this.activeLayer.height,
+				data: new Uint8ClampedArray(this.activeLayer.imageData.data)
+			}
+			: null,
+		tileSize: this.tileSize,
+		colorCount: this.colorCount,
+		toggleGrid: this.toggleGrid
+	};
+};
+
+CanvasManager.prototype.setState = function (state) {
+	if (state.activeLayer) {
+		this.activeLayer = {
+			width: state.activeLayer.width,
+			height: state.activeLayer.height,
+			imageData: new ImageData(
+				new Uint8ClampedArray(state.activeLayer.data),
+				state.activeLayer.width,
+				state.activeLayer.height
+			)
+		};
+		this.resizeCanvas(state.activeLayer.width, state.activeLayer.height);
+	}
+	this.tileSize = state.tileSize;
+	this.colorCount = state.colorCount;
+	this.toggleGrid = state.toggleGrid;
+	this.redraw();
+};
+
+
+
 
 
 // NOT IMPLEMENTED - just an idea
