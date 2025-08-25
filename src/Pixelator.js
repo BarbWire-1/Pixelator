@@ -6,7 +6,7 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 // TODO ADD A GET-/SETSTATE TO ALL MODULES INVOLVED
 // tools, colorPicker and select not updated correctly, ramge???
 import { DrawingTool } from "./modules/DrawingTool.js";
-import { CanvasManager } from "./modules/Canvas.js";
+import { CanvasManager } from "./modules/canvas/Canvas.js";
 import { PaletteManager } from "./modules/PaletteManager.js";
 import { HistoryManager, debug } from "./modules/HistoryManager.js";
 import { DimensionModal } from "./modules/ModalManager.js";

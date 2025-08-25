@@ -235,22 +235,22 @@ export class CanvasManager {
 	// Download/export image
 	// --------------------
 
-	// triggers downloadModal to pass w,h
-	// initialised in Pixelator.js currently
-	downloadImage(targetWidth , targetHeight ) {
-		if (!this.activeLayer) return;
-
-		const pixelated = this.tileSize > 1 ? "pixelated" : "original";
-		const colors = this.activeLayer.colors?.length ?? "full";
-		const filename = `canvas-${pixelated}-ts${this.tileSize}-c${colors}.png`;
-		this._filename = filename;
-
+	createDimensionCanvas(targetWidth, targetHeight) {
 		// Create temporary canvas at final size
 		const tempCanvas = document.createElement("canvas");
 		tempCanvas.width = targetWidth;
 		tempCanvas.height = targetHeight;
 		const tctx = tempCanvas.getContext("2d");
+		return { tempCanvas, tctx }
+	}
 
+
+	// triggers downloadModal to pass w,h
+	// initialised in Pixelator.js currently
+	downloadImage(targetWidth , targetHeight ) {
+		if (!this.activeLayer) return;
+
+		const { tempCanvas, tctx } = this.createDimensionCanvas(targetWidth, targetHeight)
 		if (targetWidth === this.activeLayer.width && targetHeight === this.activeLayer.height) {
 			// no scaling needed
 			tctx.putImageData(this.activeLayer.imageData, 0, 0);
@@ -272,13 +272,13 @@ export class CanvasManager {
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;
-			a.download = filename;
+			a.download = 'pixelatorrr.png';
 			document.body.appendChild(a);
 			a.click();
 			a.remove();
 			URL.revokeObjectURL(url);
 			this.log("IMAGE_DOWNLOADED");
-			this._filename = null;
+
 		}, "image/png");
 	}
 
