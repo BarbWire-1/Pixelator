@@ -2,32 +2,31 @@
 MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
-export let DEBUG =false; // toggle this anywhere at runtime
+export let DEBUG = true; // toggle this anywhere at runtime
 
 export function debug(...args) {
 	if (!DEBUG) return;
 	console.log("[DEBUG]", ...args);
 }
 
-
-
-//import { debug } from "./debug.js";
-
 export class HistoryManager {
 	constructor (limit = 50) {
 		this.limit = limit;
 		this.stack = [];
-		this.index = -1;
+		this.index = -1; // -1 means "no current state yet"
 		debug("HistoryManager initialized, limit:", limit);
 	}
 
 	push(state) {
+		// If we undid some steps, drop all "future" states
 		if (this.index < this.stack.length - 1) {
 			this.stack = this.stack.slice(0, this.index + 1);
 			debug("Redo states cleared");
 		}
 
 		this.stack.push(state);
+
+		// Enforce limit
 		if (this.stack.length > this.limit) {
 			this.stack.shift();
 			if (this.index > 0) this.index--;
@@ -71,5 +70,9 @@ export class HistoryManager {
 
 	canRedo() {
 		return this.index < this.stack.length - 1;
+	}
+
+	current() {
+		return this.stack[ this.index ] || null;
 	}
 }

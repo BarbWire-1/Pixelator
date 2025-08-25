@@ -34,10 +34,13 @@ export function initPixelator() {
 	const cm = new CanvasManager(elements.canvas);
 	const pm = new PaletteManager(cm, elements.swatchesContainer, elements.colorPicker);
 	const tool = new DrawingTool(cm, elements.colorPicker, elements.modeSelect, elements.displayEl);
+
+
 	document.getElementById("downloadBtn")
 		.addEventListener('click', () => {
 			console.log("clicked dl")
 			cm.downloadImage()
+			snapshot("Image loaded")
 		})
 	// --- Snapshot / History ---
 	function snapshot(desc = "") {
@@ -63,14 +66,21 @@ export function initPixelator() {
 
 	async function restoreState(state) {
 		if (state.layer) {
-			cm.activeLayer.imageData = state.layer.imageData;
 			cm.resizeCanvas(state.layer.width, state.layer.height);
+			const target = cm.activeLayer.imageData;
+			target.data.set(state.layer.imageData.data);
 			cm.redraw();
+		} else {
+			// No layer → clear the canvas
+			//cm.clearCanvas(); => add this
+			cm.ctx.clearRect(0, 0, canvas.width, canvas.height)
 		}
 		pm.setPaletteState(state.palette);
 		tool.isEraser = state.tool.isEraser;
 		tool.updateDisplay();
 	}
+
+
 
 	// --- Event Listeners ---
 	function setupToolListeners() {
@@ -90,7 +100,7 @@ export function initPixelator() {
 
 		elements.createPaletteBtn.addEventListener("click", () => {
 			pm.createPalette();
-			snapshot("Created new palette");
+			//snapshot("Created new palette");
 		});
 
 		elements.colorPicker.addEventListener("input", () => {
@@ -108,7 +118,7 @@ export function initPixelator() {
 		elements.toggleGridCheckbox.addEventListener("change", () => {
 			cm.toggleGrid = elements.toggleGridCheckbox.checked;
 			cm.redraw();
-			snapshot("Toggle grid");
+			//snapshot("Toggle grid");
 		});
 
 	}
@@ -129,9 +139,10 @@ export function initPixelator() {
 		elements.quantizeTileBtn.addEventListener("click", async () => {
 			if (!cm.activeLayer || !cm.rawImage) return;
 			await cm.applyQuantizeAndTile(cm.rawImage, cm.colorCount, cm.tileSize);
-			snapshot(`Quantize image with ${cm.colorCount} colors, tile size ${cm.tileSize}`);
 			pm.createPalette();
-			snapshot("quantized and pixelated");
+			snapshot(`Quantize image with ${cm.colorCount} colors, tile size ${cm.tileSize}`);
+
+
 		});
 	}
 

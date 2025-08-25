@@ -228,6 +228,7 @@ export class PaletteManager {
 
 			if (selected) this.selectSwatch(swatch);
 		});
+		//snapshot('Palette created')
 	}
 
 	//=========================
