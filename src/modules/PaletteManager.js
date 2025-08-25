@@ -6,6 +6,7 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 import { snapshot } from "../main.js";
 import { Colors } from "./Colors.js"
 // TODO - move listeners OUT wire history in int
+// TODO not sure about the listeners in here....
 //=========================
 // PALETTE MANAGER
 //=========================
@@ -84,24 +85,34 @@ export class PaletteManager {
 
 		// Clone the template
 		const div = this.swatchTemplate.content.firstElementChild.cloneNode(true);
-
-		// Set background color
 		div.style.backgroundColor = `rgb(${r},${g},${b})`;
-
-		// Add hex tooltip
-		div.title = `#${[ r, g, b ].map(x => x.toString(16).padStart(2, "0")).join('')}`;
-
-		// Append to container
+		div.title = `Keep pressed to highlight pixels`;
 		this.container.appendChild(div);
 
-		// Store swatch info
-		this.swatches.push({
+		// Create the swatch object before pushing to ref
+		const swatch = {
 			r,
 			g,
 			b,
-			pixels: pixels.map(idx => ({ index: idx })),
+			pixels: pixels.map(idx => ({ index: idx })), // keep as objects
 			div
-		});
+		};
+
+		this.swatches.push(swatch);
+		// Attach listeners via a class method
+		this.attachSwatchListeners(swatch);
+
+		return swatch;
+
+
+	}
+
+	attachSwatchListeners(swatch) {
+		const applyNeon = () => this.cm.recolorPixels(swatch.pixels, 0, 255, 255, false);
+		const resetColor = () => this.cm.recolorPixels(swatch.pixels, swatch.r, swatch.g, swatch.b, false);
+
+		swatch.div.addEventListener("mousedown", applyNeon);
+		swatch.div.addEventListener("mouseup", resetColor);
 	}
 
 
@@ -147,11 +158,9 @@ export class PaletteManager {
 
 		this.updateHex(hex)
 
+
+
 	}
-
-
-
-
 
 	// update the hex programmatically
 	updateHex(hex) {
@@ -189,17 +198,19 @@ export class PaletteManager {
 
 	recolorSelectedPixels(r, g, b) {
 		if (!this.selectedSwatch) return;
-
-		this.cm.recolorPixels(this.selectedSwatch.pixels, r, g, b);
-
 		const sw = this.selectedSwatch;
 		sw.r = r;
 		sw.g = g;
 		sw.b = b;
 		sw.div.style.backgroundColor = `rgb(${r},${g},${b})`;
 
+
+		//sw.div.classList.remove("erased");
+
 		this.colorPicker.value = this.rgbToHex(r, g, b);
-		sw.div.classList.remove("erased");
+		this.cm.recolorPixels(this.selectedSwatch.pixels, r, g, b);
+
+
 	}
 
 	//=========================
@@ -220,17 +231,19 @@ export class PaletteManager {
 		this.addDeselectSwatch();
 
 		state.forEach(({ r, g, b, pixels, selected }) => {
-			const div = document.createElement("div");
-			div.className = "swatch";
+			// Manually create swatch
+			const div = this.swatchTemplate.content.firstElementChild.cloneNode(true);
 			div.style.backgroundColor = `rgb(${r},${g},${b})`;
 			this.container.appendChild(div);
 
-			const swatch = { r, g, b, pixels: pixels.map((idx) => ({ index: idx })), div };
+			const swatch = { r, g, b, pixels: pixels.map(idx => ({ index: idx })), div };
 			this.swatches.push(swatch);
+
+			// Attach listeners
+			this.attachSwatchListeners(swatch);
 
 			if (selected) this.selectSwatch(swatch);
 		});
-		//snapshot('Palette created')
 	}
 
 	//=========================
@@ -240,11 +253,3 @@ export class PaletteManager {
 		return "#" + [ r, g, b ].map((x) => x.toString(16).padStart(2, "0")).join("");
 	}
 }
-// PaletteManager.js prototype augmentation
-PaletteManager.prototype.getState = function () {
-	return this.getPaletteState();
-};
-
-PaletteManager.prototype.setState = function (state) {
-	this.setPaletteState(state);
-};

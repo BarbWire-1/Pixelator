@@ -67,7 +67,7 @@ export function initPixelator() {
 			//cm.downloadImage()
 			snapshot("Image loaded")
 		})
-// 	// --- Snapshot / History ---
+ 	// --- Snapshot / History ---
 	function snapshot(desc = "") {
 		const state = {
 			layer: cm.activeLayer
@@ -212,12 +212,12 @@ export function initPixelator() {
 			//snapshot("Created new palette");
 		});
 
-		elements.colorPicker.addEventListener("input", () => {
+		elements.colorPicker.addEventListener("change", () => {
 			const hex = elements.colorPicker.value;
 			const r = parseInt(hex.substr(1, 2), 16);
 			const g = parseInt(hex.substr(3, 2), 16);
 			const b = parseInt(hex.substr(5, 2), 16);
-			pm.recolorSelectedPixels(r, g, b);
+			pm.recolorSelectedPixels(r, g, b, false);
 
 		});
 
