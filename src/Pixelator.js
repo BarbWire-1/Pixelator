@@ -212,24 +212,19 @@ export function initPixelator() {
 			//snapshot("Created new palette");
 		});
 
-		elements.colorPicker.addEventListener("change", () => {
-			const hex = elements.colorPicker.value;
-			const r = parseInt(hex.substr(1, 2), 16);
-			const g = parseInt(hex.substr(3, 2), 16);
-			const b = parseInt(hex.substr(5, 2), 16);
-			pm.recolorSelectedPixels(r, g, b, false);
+		const hexToRgb = hex =>
+			hex.match(/[A-Fa-f0-9]{2}/g).map(v => parseInt(v, 16));
 
-		});
+		const handlePicker = (e) => {
+			const [ r, g, b ] = hexToRgb(e.target.value);
+			const isCommit = e.type === "change"; // only true when user releases
+			pm.recolorSelectedPixels(r, g, b, isCommit);
+			if (isCommit) snapshot("Recolored");
+		};
 
-		// final commit when released
-		elements.colorPicker.addEventListener("change", (e) => {
-			const hex = elements.colorPicker.value;
-			const r = parseInt(hex.substr(1, 2), 16);
-			const g = parseInt(hex.substr(3, 2), 16);
-			const b = parseInt(hex.substr(5, 2), 16);
-			pm.recolorSelectedPixels(r, g, b,true)
-			snapshot("Recolored");
-		});
+		elements.colorPicker.addEventListener("input", handlePicker);
+		elements.colorPicker.addEventListener("change", handlePicker);
+
 
 	}
 

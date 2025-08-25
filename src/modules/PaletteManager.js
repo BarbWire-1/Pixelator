@@ -196,7 +196,7 @@ export class PaletteManager {
 		snapshot("Erase selected swatch");
 	}
 
-	recolorSelectedPixels(r, g, b) {
+	recolorSelectedPixels(r, g, b, log = true) {
 		if (!this.selectedSwatch) return;
 		const sw = this.selectedSwatch;
 		sw.r = r;
@@ -208,9 +208,8 @@ export class PaletteManager {
 		//sw.div.classList.remove("erased");
 
 		this.colorPicker.value = this.rgbToHex(r, g, b);
-		//this.cm.recolorPixels(this.selectedSwatch.pixels, r, g, b, false);
-		this.cm.recolorPixels(this.selectedSwatch.pixels, r, g, b);
-		// recolorPixels(pixels, r, g, b, log = true) 
+		this.cm.recolorPixels(this.selectedSwatch.pixels, r, g, b, log);
+		
 	}
 
 	//=========================
