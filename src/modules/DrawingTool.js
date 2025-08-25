@@ -207,12 +207,18 @@ export class DrawingTool {
 	// Line Drawing
 	// ----------------------------
 	drawLine(p0, p1) {
-		// Bresenham line calculation
 		const pixels = this.bresenham(p0.x, p0.y, p1.x, p1.y);
-		// apply brush/eraser per tile
-		pixels.forEach(({ x, y }) => this.applyTile(x, y));
+
+		pixels.forEach(({ x, y }) => {
+			this.applyTile(x, y);           // normal tile
+			if (this.mode !== "N") {        // mirrored modes
+				this.applyMirrors(x, y, this.currentColor, 255);
+			}
+		});
+
 		this.cm.redraw();
 	}
+
 
 
 	bresenham(x0, y0, x1, y1) {

@@ -2,6 +2,7 @@
 MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
+// TODO update all UI inputs on snapshot change!!!!!!
 
 import { DrawingTool } from "./modules/DrawingTool.js";
 import { CanvasManager } from "./modules/Canvas.js";
@@ -58,11 +59,17 @@ export function initPixelator() {
 				: null,
 			palette: pm.getPaletteState(),
 			tool: { isEraser: tool.isEraser },
+			tileSize: cm.tileSize,
+			colorCount: cm.colorCount,
+			toggleGrid: cm.toggleGrid,
+			mode: tool.isEraser ? "eraser" : "draw",
+			zoom: elements.zoomInput.value,
 			desc
 		};
 		history.push(state);
 		debug("Snapshot taken:", desc);
 	}
+
 
 	async function restoreState(state) {
 		if (state.layer) {
@@ -72,13 +79,46 @@ export function initPixelator() {
 			cm.redraw();
 		} else {
 			// No layer → clear the canvas
-			//cm.clearCanvas(); => add this
-			cm.ctx.clearRect(0, 0, canvas.width, canvas.height)
+			cm.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
 		}
+
+		// Restore palette and tool
 		pm.setPaletteState(state.palette);
 		tool.isEraser = state.tool.isEraser;
 		tool.updateDisplay();
+
+		// --- Sync input elements ---
+		if (state.tileSize !== undefined) {
+			cm.tileSize = state.tileSize;
+			tool.tileSize = state.tileSize;
+			elements.tileSizeInput.value = state.tileSize;
+		}
+		if (state.colorCount !== undefined) {
+			cm.colorCount = state.colorCount;
+			elements.colorCountInput.value = state.colorCount;
+		}
+		if (state.toggleGrid !== undefined) {
+			cm.toggleGrid = state.toggleGrid;
+			elements.toggleGridCheckbox.checked = state.toggleGrid;
+			cm.redraw();
+		}
+		if (state.mode !== undefined) {
+			tool.isEraser = state.mode === "eraser";
+			tool.updateDisplay();
+			// update mode radios if you have them
+			document.querySelectorAll('input[name="toolMode"]').forEach(radio => {
+				radio.checked = radio.value === state.mode;
+			});
+		}
+		if (state.zoom !== undefined) {
+			elements.zoomInput.value = state.zoom;
+			const scale = parseFloat(state.zoom);
+			elements.canvas.style.transform = `scale(${scale})`;
+		}
+
+		debug("Inputs synced to history state");
 	}
+
 
 
 
