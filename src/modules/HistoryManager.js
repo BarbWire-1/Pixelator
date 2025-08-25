@@ -2,7 +2,7 @@
 MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
-export let DEBUG = true; // toggle this anywhere at runtime
+export let DEBUG = false; 
 
 export function debug(...args) {
 	if (!DEBUG) return;
