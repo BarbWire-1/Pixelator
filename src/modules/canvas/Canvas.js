@@ -9,20 +9,8 @@ import { snapshot } from "../../main.js";
 
 
 
-// => OPTIONAL USE RAW IMAGE, LAST IMAGE ???
-//=========================
-// LAYER CLASS
-//=========================
-class Layer {
-	constructor (width, height, name = "Layer") {
-		this.width = width;
-		this.height = height;
-		this.name = name;
-		this.imageData = new ImageData(width, height);
-		this.colors = []; // [{r,g,b,pixels,erased}]
-	}
-}
 
+import { Layer } from "../Layer.js";
 //=========================
 // CANVAS MANAGER
 //=========================
@@ -133,17 +121,24 @@ export class CanvasManager {
 	// Image Loading
 	// --------------------
 	async loadImage(img) {
-		this.rawImage = img;
-
 		const start = performance.now();
-		const { targetW, targetH } = this.prepareCanvasForImage(img);
-		const imageData = this.drawImageOnCanvas(img, targetW, targetH);
-		const layer = this.createBaseLayer(targetW, targetH, imageData);
+// TODO later draw on layer ctx - now only virtual
+		const { targetW, targetH } = this.setContainerDimensions(img);
+		this._drawToCtx(this.ctx, img, targetW, targetH, false);
+		const imageData = this.ctx.getImageData(0, 0, targetW, targetH);
+
+		// Create a new base layer that owns the raw image
+		const layer = new Layer(targetW, targetH, "Base Layer", img);
+		layer.imageData = imageData;
+
+		this.layers = [ layer ];
+		this.activeLayer = layer;
 		this.redraw();
 
 		this.log(`Image loaded: ${img.width}x${img.height}, scaled to ${targetW}x${targetH} in ${(performance.now() - start).toFixed(2)} ms`);
 		return layer;
 	}
+
 
 	setContainerDimensions(img) {
 		const container = document.getElementById("canvas-container");
@@ -229,185 +224,69 @@ export class CanvasManager {
 
 
 	// --------------------
-	// Quantization
-	// --------------------
-	// --------------------
-	// Phase 1: Quantize
+	// Quantize only
 	// --------------------
 	async quantizeImage() {
-		if (!this.rawImage || !this.dimensions) return;
-		const { width: canvasW, height: canvasH } = this.dimensions;
+		if (!this.activeLayer || !this.dimensions) return;
 
 		const t0 = performance.now();
-		this.log(`quantizeImage: start, tileSize=${this.tileSize}, colorCount=${this.colorCount}`);
+		const { width: canvasW, height: canvasH } = this.dimensions;
+		const { rawImage } = this.activeLayer;
+		const layer = this.activeLayer;
 
-		const tempWidth = this.tileSize === 1 ? canvasW : Math.ceil(canvasW / this.tileSize);
-		const tempHeight = this.tileSize === 1 ? canvasH : Math.ceil(canvasH / this.tileSize);
+		// Determine temporary canvas size
+		const [ tempWidth, tempHeight ] = this.tileSize === 1
+			? [ canvasW, canvasH ]
+			: [ Math.ceil(canvasW / this.tileSize), Math.ceil(canvasH / this.tileSize) ];
 
+		// Prepare temporary canvas for quantization
+		const tempCanvas = this.createTempCanvas(rawImage, tempWidth, tempHeight, false);
 
-		const tempCanvas = this.createTempCanvas(
-			this.rawImage,
+		// Run kMeans quantization
+		const { palette, clusteredData, uniqueCount } = await this.runQuantizationInWorker(tempCanvas, this.colorCount);
+
+		// Store results in layer
+		Object.assign(layer, {
+			clusteredData,
 			tempWidth,
 			tempHeight,
-			false,
-			this.tileSize === 1 ? "Step 1 (direct)" : "Step 1 (downscale)"
-		);
+			colors: palette
+		});
 
-		const { palette, clusteredData } = await this.runQuantizationInWorker(
-			tempCanvas,
-			this.colorCount,
-			this.allOpaque
-		);
+		// Apply clustered data (auto-upscale handled inside layer)
+		layer.applyClusteredData(clusteredData, tempWidth, tempHeight, this.tileSize);
 
-		// cache directly in activeLayer for later use
-		if (!this.activeLayer) this.activeLayer = {};
-		this.activeLayer.clusteredData = clusteredData;
-		this.activeLayer.tempWidth = tempWidth;
-		this.activeLayer.tempHeight = tempHeight;
-		this.activeLayer.colors = palette;
-
-		this.log(`quantizeImage: complete in ${(performance.now() - t0).toFixed(2)} ms, palette length=${palette.length}`);
-		return palette;
+		// Debug log
+		const totalPixels = canvasW * canvasH;
+		this.log(`quantizeImage: done in ${(performance.now() - t0).toFixed(2)} ms, totalPixels=${totalPixels}, uniqueColors=${uniqueCount}, palette length=${palette.length}`);
 	}
 
 
 	// --------------------
-	// Phase 2: Tile / Render
+	// Apply tiling only (uses previously clustered data)
 	// --------------------
 	applyTileSize() {
-		if (!this.activeLayer || !this.activeLayer.clusteredData || !this.dimensions) return;
+		const layer = this.activeLayer;
+		if (!layer || !layer.clusteredData) return;
 
-		const { width: canvasW, height: canvasH } = this.dimensions;
-		const layer = new Layer(canvasW, canvasH, `Layer ${this.layers.length}`);
-		const ctx = this.layerCanvas(layer);
-		const { clusteredData, tempWidth, tempHeight } = this.activeLayer;
-
-		const t0 = performance.now();
-		this.log(`applyTileSize: start, tileSize=${this.tileSize}`);
-
-		ctx.imageSmoothingEnabled = false;
-		ctx.clearRect(0, 0, canvasW, canvasH);
-
-		if (this.tileSize === 1) {
-			const tStart = performance.now();
-			layer.imageData.data.set(clusteredData);
-			ctx.putImageData(layer.imageData, 0, 0);
-			this.log(`applyTileSize: TileSize=1 copy done in ${(performance.now() - tStart).toFixed(2)} ms`);
-		} else {
-			const tStart = performance.now();
-			const tinyCanvas = document.createElement("canvas");
-			tinyCanvas.width = tempWidth;
-			tinyCanvas.height = tempHeight;
-			tinyCanvas.getContext("2d").putImageData(new ImageData(clusteredData, tempWidth, tempHeight), 0, 0);
-			this.log(`applyTileSize: temp canvas creation done in ${(performance.now() - tStart).toFixed(2)} ms`);
-
-			const tScale = performance.now();
-			ctx.drawImage(
-				tinyCanvas,
-				0, 0, tempWidth, tempHeight,
-				0, 0, tempWidth * this.tileSize, tempHeight * this.tileSize
-			);
-
-			layer.imageData.data.set(ctx.getImageData(0, 0, canvasW, canvasH).data);
-			this.log(`applyTileSize: scaled clusteredData in ${(performance.now() - tScale).toFixed(2)} ms`);
-		}
-
-		this.layers.push(layer);
-		this.activeLayer = layer;
-
-		const tRedraw = performance.now();
+		layer.applyClusteredData(layer.clusteredData, layer.tempWidth, layer.tempHeight, this.tileSize);
 		this.redraw();
-		this.log(`applyTileSize: redraw done in ${(performance.now() - tRedraw).toFixed(2)} ms`);
-		this.log(`applyTileSize: total duration ${(performance.now() - t0).toFixed(2)} ms`);
+		this.log(`applyTileSize: done, tileSize=${this.tileSize}`);
 	}
 
-
 	// --------------------
-	// Combined: Quantize + Tile
+	// Quantize + Tile (convenience)
 	// --------------------
 	async applyQuantizeAndTile() {
-		if (!this.rawImage || !this.dimensions) return;
-
 		const t0 = performance.now();
-		this.log(`applyQuantizeAndTile: start`);
-
-		await this.quantizeImage();      // caches data in activeLayer
-		this.applyTileSize();            // uses cached data
-
-		this.log(`applyQuantizeAndTile: complete in ${(performance.now() - t0).toFixed(2)} ms`);
+		await this.quantizeImage(); // generates clustered data
+		this.applyTileSize();       // applies tiling
+		this.log(`applyQuantizeAndTile: done in ${(performance.now() - t0).toFixed(2)} ms`);
 
 
 	}
 
 
-
-
-	async applyQuantizeAndTileALL(img, colorCount = 16, tileSize = 10) {
-		if (!img || !this.dimensions) return;
-		this.tileSize = tileSize; //???????
-		const { width: canvasW, height: canvasH } = this.dimensions;
-
-		const start = performance.now();
-		this.log(`Starting quantization and tiling with colorCount=${colorCount}, tileSize=${tileSize}`);
-
-		// Determine quantization canvas size
-		const tempWidth = tileSize === 1 ? canvasW : canvasW / tileSize;
-		const tempHeight = tileSize === 1 ? canvasH :canvasH / tileSize;
-
-		// Downscale only if tileSize > 1
-		const tempCanvas = tileSize === 1
-			? this.createTempCanvas(img, canvasW, canvasH, false, "Step 1 (direct)")
-			: this.createTempCanvas(img, tempWidth, tempHeight, false, "Step 1 (downscale)");
-
-		// Quantize
-		const { palette, clusteredData } = await this.runQuantizationInWorker(tempCanvas, colorCount, this.allOpaque);
-		this.log(`Step 2: Quantization complete in ${(performance.now() - start).toFixed(2)} ms, palette ready.`);
-
-		// Create final layer
-		const layer = new Layer(canvasW, canvasH, `Layer ${this.layers.length}`);
-		this.log(`Step 3: Created layer ${layer.name}`);
-
-		if (tileSize === 1) {
-			// Direct copy if no tiling
-			layer.imageData.data.set(clusteredData);
-			this.log("TileSize=1: copied clusteredData directly to layer.imageData");
-		} else {
-			// Draw scaled for tileSize > 1
-			const tinyCanvas = document.createElement("canvas");
-			tinyCanvas.width = tempWidth;
-			tinyCanvas.height = tempHeight;
-			tinyCanvas.getContext("2d").putImageData(new ImageData(clusteredData, tempWidth, tempHeight), 0, 0);
-
-			const finalCtx = this.layerCanvas(layer); // helper to get canvas context for the layer
-			finalCtx.imageSmoothingEnabled = false;
-			finalCtx.drawImage(tinyCanvas, 0, 0, tempWidth, tempHeight, 0, 0, canvasW, canvasH);
-
-			// Copy final pixels
-			layer.imageData.data.set(finalCtx.getImageData(0, 0, canvasW, canvasH).data);
-			this.log(`TileSize>1: scaled clusteredData to final layer`);
-		}
-
-		// Push layer
-		this.layers.push(layer);
-		this.activeLayer = layer;
-		layer.colors = palette;
-		this.redraw();
-		this.log(`Quantization & tiling done in ${(performance.now() - start).toFixed(2)} ms`);
-
-		return palette;
-	}
-
-
-// helper to create a canvas context for a layer
-layerCanvas(layer) {
-	if (!layer.canvas) {
-		const canvas = document.createElement("canvas");
-		canvas.width = layer.width;
-		canvas.height = layer.height;
-		layer.canvas = canvas;
-	}
-	return layer.canvas.getContext("2d");
-}
 
 
 
@@ -572,36 +451,3 @@ CanvasManager.prototype.reQuantize = async function ({
 
 	this.log(`Re-quantized using ${preservePalette ? 'existing palette' : colorCount + ' colors'}`);
 };
-
-
-
-
-
-// NOT IMPLEMENTED - just an idea
-// 	async applyQuantizeAndTileFastPreview(img, colorCount = 16, internalDownscale = 10) {
-// 		const taskStart = performance.now();
-// 		if (!img || !this.dimensions) return;
-//
-// 		const { width: canvasW, height: canvasH } = this.dimensions;
-//
-// 		this.log(`Starting FAST quantization preview with colorCount=${colorCount}, internalDownscale=${internalDownscale}`);
-//
-// 		const tempCanvas = this.createTempCanvas(img, Math.ceil(canvasW / internalDownscale), Math.ceil(canvasH / internalDownscale), true, "Step 1 (internal downscale)");
-//
-// 		const step2Start = performance.now();
-// 		const { palette, clusteredData, uniqueCount } = await kMeansQuantize(tempCanvas, colorCount, this.kMeansIterations);
-// 		this.log(`Step 2 (k-means) done in ${(performance.now() - step2Start).toFixed(2)} ms`);
-// 		this.log(`Unique colors found: ${uniqueCount}`);
-// 		this.log(`Palette length after quantization: ${palette.length}`);
-//
-// 		const layer = this.mapClusteredToLayer(clusteredData, canvasW, canvasH, 1, "Step 3 (map back to full resolution)");
-//
-// 		const step4Start = performance.now();
-// 		this.layers.push(layer);
-// 		this.activeLayer = layer;
-// 		this.redraw();
-// 		this.log(`Step 4 (push layer & redraw) done in ${(performance.now() - step4Start).toFixed(2)} ms`);
-//
-// 		this.log(`Task "applyQuantizeAndTileFastPreview" completed in ${(performance.now() - taskStart).toFixed(2)} ms`);
-// 		return palette;
-// 	}

@@ -258,8 +258,8 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 
 	function setupQuantizeButton() {
 		elements.quantizeTileBtn.addEventListener("click", async () => {
-			if (!cm.activeLayer || !cm.rawImage) return;
-			await cm.applyQuantizeAndTile(cm.rawImage, cm.colorCount, cm.tileSize);
+			if (!cm.activeLayer || !cm.activeLayer.rawImage) return;
+			await cm.applyQuantizeAndTile(cm.activeLayer.rawImage, cm.colorCount, cm.tileSize);
 			pm.createPalette();
 			snapshot(`Quantize image with ${cm.colorCount} colors, tile size ${cm.tileSize}`);
 
