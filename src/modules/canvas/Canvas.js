@@ -298,34 +298,106 @@ export class CanvasManager {
 		return layer;
 	}
 
+// 	async applyQuantizeAndTile(img, colorCount = 16, tileSize = 10) {
+// 		if (!img || !this.dimensions) return;
+// 		this.tileSize = tileSize;
+// 		const { width: canvasW, height: canvasH } = this.dimensions;
+//
+// 		this.log(`Starting quantization and tiling with colorCount=${colorCount}, tileSize=${tileSize}`);
+// 		const start = performance.now();
+//
+// 		const tempCanvas = this.createTempCanvas(
+// 			img,
+// 			Math.ceil(canvasW / tileSize),
+// 			Math.ceil(canvasH / tileSize),
+// 			false,
+// 			"Step 1 (downscale)"
+// 		);
+//
+// 		const { palette, clusteredData } = await this.runQuantizationInWorker(tempCanvas, colorCount);
+//
+// 		const layer = this.mapClusteredToLayer(clusteredData, canvasW, canvasH, tileSize);
+//
+//
+// 		this.layers.push(layer);
+// 		this.activeLayer = layer;
+// 		layer.colors = palette;
+// 		this.redraw();
+//
+// 		this.log(`Quantization & tiling completed in ${(performance.now() - start).toFixed(2)} ms`);
+// 		console.log(palette, clusteredData)
+// 		return palette;
+	// 	}
+
 	async applyQuantizeAndTile(img, colorCount = 16, tileSize = 10) {
 		if (!img || !this.dimensions) return;
 		this.tileSize = tileSize;
 		const { width: canvasW, height: canvasH } = this.dimensions;
 
-		this.log(`Starting quantization and tiling with colorCount=${colorCount}, tileSize=${tileSize}`);
 		const start = performance.now();
+		this.log(`Starting quantization and tiling with colorCount=${colorCount}, tileSize=${tileSize}`);
 
-		const tempCanvas = this.createTempCanvas(
-			img,
-			Math.ceil(canvasW / tileSize),
-			Math.ceil(canvasH / tileSize),
-			false,
-			"Step 1 (downscale)"
-		);
+		// Determine quantization canvas size
+		const tempWidth = tileSize === 1 ? canvasW : Math.ceil(canvasW / tileSize);
+		const tempHeight = tileSize === 1 ? canvasH : Math.ceil(canvasH / tileSize);
 
+		// Downscale only if tileSize > 1
+		const tempCanvas = tileSize === 1
+			? this.createTempCanvas(img, canvasW, canvasH, false, "Step 1 (direct)")
+			: this.createTempCanvas(img, tempWidth, tempHeight, false, "Step 1 (downscale)");
+
+		// Quantize
 		const { palette, clusteredData } = await this.runQuantizationInWorker(tempCanvas, colorCount);
+		this.log(`Step 2: Quantization complete in ${(performance.now() - start).toFixed(2)} ms, palette ready.`);
 
-		const layer = this.mapClusteredToLayer(clusteredData, canvasW, canvasH, tileSize);
+		// Create final layer
+		const layer = new Layer(canvasW, canvasH, `Layer ${this.layers.length}`);
+		this.log(`Step 3: Created layer ${layer.name}`);
 
+		if (tileSize === 1) {
+			// Direct copy if no tiling
+			layer.imageData.data.set(clusteredData);
+			this.log("TileSize=1: copied clusteredData directly to layer.imageData");
+		} else {
+			// Draw scaled for tileSize > 1
+			const tinyCanvas = document.createElement("canvas");
+			tinyCanvas.width = tempWidth;
+			tinyCanvas.height = tempHeight;
+			tinyCanvas.getContext("2d").putImageData(new ImageData(clusteredData, tempWidth, tempHeight), 0, 0);
+
+			const finalCtx = this.layerCanvas(layer); // helper to get canvas context for the layer
+			finalCtx.imageSmoothingEnabled = false;
+			finalCtx.drawImage(tinyCanvas, 0, 0, tempWidth, tempHeight, 0, 0, canvasW, canvasH);
+
+			// Copy final pixels
+			layer.imageData.data.set(finalCtx.getImageData(0, 0, canvasW, canvasH).data);
+			this.log(`TileSize>1: scaled clusteredData to final layer`);
+		}
+
+		// Push layer
 		this.layers.push(layer);
 		this.activeLayer = layer;
 		layer.colors = palette;
 		this.redraw();
+		this.log(`Quantization & tiling done in ${(performance.now() - start).toFixed(2)} ms`);
 
-		this.log(`Quantization & tiling completed in ${(performance.now() - start).toFixed(2)} ms`);
 		return palette;
 	}
+
+
+// helper to create a canvas context for a layer
+layerCanvas(layer) {
+	if (!layer.canvas) {
+		const canvas = document.createElement("canvas");
+		canvas.width = layer.width;
+		canvas.height = layer.height;
+		layer.canvas = canvas;
+	}
+	return layer.canvas.getContext("2d");
+}
+
+
+
 
 	// --------------------
 	// Pixel editing
@@ -350,7 +422,7 @@ export class CanvasManager {
 			data[ idx + 3 ] = 255;
 		});
 		log && this.log(`Recolored ${pixels.length} pixels to rgb(${r},${g},${b})`);
-		
+
 	}
 
 	drawBoundingBox(pixels, color = "limegreen") {
