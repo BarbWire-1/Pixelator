@@ -7,58 +7,6 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 
 import { snapshot } from "../../main.js";
 
-// FULLY IMPLEMENT THIS
-export const messages = {
-	LOAD_IMAGE: (ctx) => `2 Image loaded: ${ctx.rawImage?.width}x${ctx.rawImage?.height}, scaled to ${ctx.dimensions?.width}x${ctx.dimensions?.height}`,
-	LOAD_IMAGE_COMPLETE: (ctx) => `Task "loadImage" completed in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
-	PREPARE_CANVAS: (ctx) => `Step 1 (prepare canvas) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
-	DRAW_IMAGE: (ctx) => `Step 2 (draw image) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
-	TEMP_CANVAS: (ctx) => `${ctx._stepName || "Temp Canvas"} done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
-	BASE_LAYER: (ctx) => `Step 3 (create base layer) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
-	QUANTIZATION_START: (ctx) => `Starting quantization and tiling with colorCount=${ctx.colorCount}, tileSize=${ctx.tileSize}`,
-	QUANTIZATION_DONE: (ctx) => `Step 2 (quantize in ${ctx.kMeansIterations} iterations) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
-	UNIQUE_COLORS: (ctx) => `Unique colors found: ${ctx._uniqueCount || 0}`,
-	PALETTE_LENGTH: (ctx) => `Palette length after quantization: ${ctx._paletteLength || 0}`,
-	MAP_LAYER: (ctx) => `Step 3&4 (map & upscale) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
-	PUSH_LAYER: (ctx) => `Step 5 (push layer & redraw) done in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
-	APPLY_QUANTIZE_COMPLETE: (ctx) => `Task "applyQuantizeAndTile" completed in ${((performance.now() - ctx._taskStart)?.toFixed(2)) || 0} ms`,
-	PIXELS_ERASED: (ctx) => `Erased ${ctx._pixels?.length || 0} pixels`,
-	PIXELS_RECOLORED: (ctx) => {
-		const p = ctx._pixels || [];
-		return `Recolored ${p.length} pixels to rgb(${ctx._r},${ctx._g},${ctx._b})`;
-	},
-	BOUNDING_BOX_DRAWN: (ctx) => `Bounding box drawn for ${ctx._pixels?.length || 0} pixels`,
-	IMAGE_DOWNLOADED: (ctx) => `Image downloaded as "${ctx._filename || 'unknown'}"`,
-	RE_QUANTIZE: (ctx) => `Re-quantized using ${ctx._preservePalette ? 'existing palette' : ctx.colorCount + ' colors'}`
-};
-
-
-// // Internal helpers for dynamic log data
-// this._taskStart = 0;
-// this._pixels = null;
-// this._r = this._g = this._b = 0;
-// this._filename = null;
-// this._stepName = "";
-// this._uniqueCount = 0;
-// this._paletteLength = 0;
-// this._preservePalette = false;
-//
-// 	}
-// log2(key) {
-// 	if (!this.showLogs) return;
-// 	const now = performance.now();
-// 	const elapsed = ((now - this.startTime) / 1000).toFixed(3);
-// 	const messageFn = messages[ key ];
-// 	const message = typeof messageFn === "function" ? messageFn(this) : key;
-// 	this.logEntries.push({
-// 		time: new Date().toLocaleTimeString(),
-// 		elapsed: parseFloat(elapsed),
-// 		message
-// 	});
-// }
-//
-// getLogs2() { return this.logEntries; }
-// clearLogs2() { this.logEntries = []; }
 
 
 // => OPTIONAL USE RAW IMAGE, LAST IMAGE ???
@@ -94,6 +42,8 @@ export class CanvasManager {
 
 		this.showLogs = true;
 		this.allOpaque = false;
+
+		this.liveUpdate = true;
 
 		this.kMeansIterations = 1;
 		this.worker = null;
@@ -252,94 +202,141 @@ export class CanvasManager {
 	}
 
 	drawGrid() {
-		const ctx = this.ctx, w = this.canvas.width, h = this.canvas.height, ts = this.tileSize;
+		const ctx = this.ctx;
+		const w = this.canvas.width;
+		const h = this.canvas.height;
+		const ts = this.tileSize;
+
 		ctx.strokeStyle = "#4b4b4b";
 		ctx.lineWidth = 1;
 
+		// vertical lines
 		for (let x = 0; x <= w; x += ts) {
 			ctx.beginPath();
-			ctx.moveTo(x + 0.5, 0);
-			ctx.lineTo(x + 0.5, h);
+			ctx.moveTo(x, 0);
+			ctx.lineTo(x, h);
 			ctx.stroke();
 		}
 
+		// horizontal lines
 		for (let y = 0; y <= h; y += ts) {
 			ctx.beginPath();
-			ctx.moveTo(0, y + 0.5);
-			ctx.lineTo(w, y + 0.5);
+			ctx.moveTo(0, y);
+			ctx.lineTo(w, y);
 			ctx.stroke();
 		}
 	}
+
 
 	// --------------------
 	// Quantization
 	// --------------------
-	mapClusteredToLayer(clusteredData, canvasW, canvasH, tileSize) {
-		const start = performance.now();
-		const layer = new Layer(canvasW, canvasH, `Layer ${this.layers.length}`);
-		const outData = layer.imageData.data;
+	// --------------------
+	// Phase 1: Quantize
+	// --------------------
+	async quantizeImage() {
+		if (!this.rawImage || !this.dimensions) return;
+		const { width: canvasW, height: canvasH } = this.dimensions;
 
-		if (tileSize === 1) {
-			outData.set(clusteredData);
-		} else {
-			const cw = canvasW, ch = canvasH, ts = tileSize;
-			const tempW = Math.ceil(cw / ts), tempH = Math.ceil(ch / ts);
+		const t0 = performance.now();
+		this.log(`quantizeImage: start, tileSize=${this.tileSize}, colorCount=${this.colorCount}`);
 
-			for (let y = 0; y < tempH; y++) {
-				const startY = y * ts, tileH = Math.min(ts, ch - startY);
-				for (let x = 0; x < tempW; x++) {
-					const i = (y * tempW + x) * 4;
-					const [ r, g, b, a ] = clusteredData.slice(i, i + 4);
-					const startX = x * ts, tileW = Math.min(ts, cw - startX);
-					for (let ty = 0; ty < tileH; ty++) {
-						let rowIndex = ((startY + ty) * cw + startX) * 4;
-						for (let tx = 0; tx < tileW; tx++, rowIndex += 4) {
-							outData[ rowIndex ] = r;
-							outData[ rowIndex + 1 ] = g;
-							outData[ rowIndex + 2 ] = b;
-							outData[ rowIndex + 3 ] = a;
-						}
-					}
-				}
-			}
-		}
+		const tempWidth = this.tileSize === 1 ? canvasW :(canvasW / this.tileSize);
+		const tempHeight = this.tileSize === 1 ? canvasH : (canvasH / this.tileSize);
 
-		this.log(`Mapped clustered data to layer in ${(performance.now() - start).toFixed(2)} ms`);
-		return layer;
+		const tempCanvas = this.createTempCanvas(
+			this.rawImage,
+			tempWidth,
+			tempHeight,
+			false,
+			this.tileSize === 1 ? "Step 1 (direct)" : "Step 1 (downscale)"
+		);
+
+		const { palette, clusteredData } = await this.runQuantizationInWorker(
+			tempCanvas,
+			this.colorCount,
+			this.allOpaque
+		);
+
+		// cache directly in activeLayer for later use
+		if (!this.activeLayer) this.activeLayer = {};
+		this.activeLayer.clusteredData = clusteredData;
+		this.activeLayer.tempWidth = tempWidth;
+		this.activeLayer.tempHeight = tempHeight;
+		this.activeLayer.colors = palette;
+
+		this.log(`quantizeImage: complete in ${(performance.now() - t0).toFixed(2)} ms, palette length=${palette.length}`);
+		return palette;
 	}
 
-// 	async applyQuantizeAndTile(img, colorCount = 16, tileSize = 10) {
-// 		if (!img || !this.dimensions) return;
-// 		this.tileSize = tileSize;
-// 		const { width: canvasW, height: canvasH } = this.dimensions;
-//
-// 		this.log(`Starting quantization and tiling with colorCount=${colorCount}, tileSize=${tileSize}`);
-// 		const start = performance.now();
-//
-// 		const tempCanvas = this.createTempCanvas(
-// 			img,
-// 			Math.ceil(canvasW / tileSize),
-// 			Math.ceil(canvasH / tileSize),
-// 			false,
-// 			"Step 1 (downscale)"
-// 		);
-//
-// 		const { palette, clusteredData } = await this.runQuantizationInWorker(tempCanvas, colorCount);
-//
-// 		const layer = this.mapClusteredToLayer(clusteredData, canvasW, canvasH, tileSize);
-//
-//
-// 		this.layers.push(layer);
-// 		this.activeLayer = layer;
-// 		layer.colors = palette;
-// 		this.redraw();
-//
-// 		this.log(`Quantization & tiling completed in ${(performance.now() - start).toFixed(2)} ms`);
-// 		console.log(palette, clusteredData)
-// 		return palette;
-// 		}
 
-	async applyQuantizeAndTile(img, colorCount = 16, tileSize = 10) {
+	// --------------------
+	// Phase 2: Tile / Render
+	// --------------------
+	applyTileSize() {
+		if (!this.activeLayer || !this.activeLayer.clusteredData || !this.dimensions) return;
+
+		const { width: canvasW, height: canvasH } = this.dimensions;
+		const layer = new Layer(canvasW, canvasH, `Layer ${this.layers.length}`);
+		const ctx = this.layerCanvas(layer);
+		const { clusteredData, tempWidth, tempHeight } = this.activeLayer;
+
+		const t0 = performance.now();
+		this.log(`applyTileSize: start, tileSize=${this.tileSize}`);
+
+		ctx.imageSmoothingEnabled = false;
+		ctx.clearRect(0, 0, canvasW, canvasH);
+
+		if (this.tileSize === 1) {
+			const tStart = performance.now();
+			layer.imageData.data.set(clusteredData);
+			ctx.putImageData(layer.imageData, 0, 0);
+			this.log(`applyTileSize: TileSize=1 copy done in ${(performance.now() - tStart).toFixed(2)} ms`);
+		} else {
+			const tStart = performance.now();
+			const tinyCanvas = document.createElement("canvas");
+			tinyCanvas.width = tempWidth;
+			tinyCanvas.height = tempHeight;
+			tinyCanvas.getContext("2d").putImageData(new ImageData(clusteredData, tempWidth, tempHeight), 0, 0);
+			this.log(`applyTileSize: temp canvas creation done in ${(performance.now() - tStart).toFixed(2)} ms`);
+
+			const tScale = performance.now();
+			ctx.drawImage(tinyCanvas, 0, 0, tempWidth, tempHeight, 0, 0, canvasW, canvasH);
+			layer.imageData.data.set(ctx.getImageData(0, 0, canvasW, canvasH).data);
+			this.log(`applyTileSize: scaled clusteredData in ${(performance.now() - tScale).toFixed(2)} ms`);
+		}
+
+		this.layers.push(layer);
+		this.activeLayer = layer;
+
+		const tRedraw = performance.now();
+		this.redraw();
+		this.log(`applyTileSize: redraw done in ${(performance.now() - tRedraw).toFixed(2)} ms`);
+		this.log(`applyTileSize: total duration ${(performance.now() - t0).toFixed(2)} ms`);
+	}
+
+
+	// --------------------
+	// Combined: Quantize + Tile
+	// --------------------
+	async applyQuantizeAndTile() {
+		if (!this.rawImage || !this.dimensions) return;
+
+		const t0 = performance.now();
+		this.log(`applyQuantizeAndTile: start`);
+
+		await this.quantizeImage();      // caches data in activeLayer
+		this.applyTileSize();            // uses cached data
+
+		this.log(`applyQuantizeAndTile: complete in ${(performance.now() - t0).toFixed(2)} ms`);
+
+		
+	}
+
+
+
+
+	async applyQuantizeAndTileALL(img, colorCount = 16, tileSize = 10) {
 		if (!img || !this.dimensions) return;
 		this.tileSize = tileSize; //???????
 		const { width: canvasW, height: canvasH } = this.dimensions;

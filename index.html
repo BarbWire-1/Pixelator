@@ -92,12 +92,22 @@
                          <div class="label-input">
                               <label for="tile-size-input" title="Size of each tile">Tile Size:</label>
                               <input type="number" id="tile-size-input" value="1" min="1" title="Set tile size">
+
+
                          </div>
+
+
+
+
                          <div class="label-input">
                               <label for="color-count-input" title="Number of colors to use">Colors:</label>
                               <input type="number" id="color-count-input" value="16" min="2" max="256"
                                    title="Set number of colors">
                          </div>
+
+                         <label for="liveUpdateInput" title="Size of each tile">
+                              <input type="checkbox" id="liveUpdateInput" checked
+                                   title="choose whether image gets updated on tilesize change">Update Live</label>
                          <label title="Make All Opaque"><input type="checkbox" id="alpha"> All Opaque</label>
                          <label title="Toggle grid overlay"><input type="checkbox" id="toggleGrid"> Show Grid</label>
                          <button id="quantize-tile-btn" disabled title="Quantize and tile the image">Quantize &

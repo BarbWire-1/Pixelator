@@ -25,6 +25,7 @@ export function initPixelator() {
 		modeSelect: document.getElementById("modeSelect"),
 		displayEl: document.getElementById("display"),
 		fileInput: document.getElementById("raw-image-input"),
+		liveUpdateInput: document.getElementById("liveUpdateInput"),
 		tileSizeInput: document.getElementById("tile-size-input"),
 		colorCountInput: document.getElementById("color-count-input"),
 		quantizeTileBtn: document.getElementById("quantize-tile-btn"),
@@ -239,10 +240,15 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 	}
 
 	function setupTileAndColorInputs() {
-		elements.tileSizeInput.addEventListener("input", (e) => {
+		elements.liveUpdateInput.addEventListener('change', (e) => cm.liveUpdate = e.target.checked)
+		elements.tileSizeInput.addEventListener("change", (e) => {
 			cm.tileSize = parseInt(e.target.value, 10) || 1;
 			tool.tileSize = cm.tileSize;
-			cm.redraw()
+			if (cm.liveUpdate) {
+				cm.applyQuantizeAndTile(); pm.createPalette(); snapshot('Live update')
+			} else {
+				cm.redraw()
+			}
 
 		});
 		elements.colorCountInput.addEventListener("change", (e) => {
