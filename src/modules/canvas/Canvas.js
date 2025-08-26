@@ -131,16 +131,23 @@ export class CanvasManager {
 			const imageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
 
 			const handler = (e) => {
-				const { success, palette, clusteredData, uniqueCount, allOpaque, error } = e.data;
+				const { success, palette, clusteredData, uniqueCount, error } = e.data;
 				if (success) resolve({ palette, clusteredData, uniqueCount });
 				else reject(new Error(error));
 				this.worker.removeEventListener("message", handler);
 			};
 
 			this.worker.addEventListener("message", handler);
-			this.worker.postMessage({ imageData, colorCount, iterations: this.kMeansIterations });
+			// pass allOpaque flag to the worker
+			this.worker.postMessage({
+				imageData,
+				colorCount,
+				iterations: this.kMeansIterations,
+				allOpaque: this.allOpaque
+			});
 		});
 	}
+
 
 	// --------------------
 	// Canvas helpers

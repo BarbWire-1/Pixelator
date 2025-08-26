@@ -85,8 +85,10 @@ export class PaletteManager {
 	}
 
 	addColorSwatch(colorData) {
-		const { r, g, b, a,pixels } = colorData;
+		const { r, g, b, a, pixels } = colorData;
 		if (r + g + b + a === 0) return; // skip fully transparent black
+
+
 		// Clone the template
 		const div = this.swatchTemplate.content.firstElementChild.cloneNode(true);
 		div.style.backgroundColor = `rgb(${r},${g},${b})`;

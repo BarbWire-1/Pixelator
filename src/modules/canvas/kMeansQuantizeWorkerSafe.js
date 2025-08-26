@@ -25,6 +25,8 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
  *          Returns the generated palette, clustered image data, and the count of unique colors.
  */
 export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaque = false) {
+
+
 	const stride = allOpaque ? 3 : 4;
 	const pixels = new Uint8Array((imageData.data.length / 4) * stride);
 	const uniqueColors = new Set();
