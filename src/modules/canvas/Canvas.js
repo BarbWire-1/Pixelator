@@ -274,39 +274,39 @@ export class CanvasManager {
 	// --------------------
 	// Quantization
 	// --------------------
-// 	mapClusteredToLayer(clusteredData, canvasW, canvasH, tileSize) {
-// 		const start = performance.now();
-// 		const layer = new Layer(canvasW, canvasH, `Layer ${this.layers.length}`);
-// 		const outData = layer.imageData.data;
-//
-// 		if (tileSize === 1) {
-// 			outData.set(clusteredData);
-// 		} else {
-// 			const cw = canvasW, ch = canvasH, ts = tileSize;
-// 			const tempW = Math.ceil(cw / ts), tempH = Math.ceil(ch / ts);
-//
-// 			for (let y = 0; y < tempH; y++) {
-// 				const startY = y * ts, tileH = Math.min(ts, ch - startY);
-// 				for (let x = 0; x < tempW; x++) {
-// 					const i = (y * tempW + x) * 4;
-// 					const [ r, g, b, a ] = clusteredData.slice(i, i + 4);
-// 					const startX = x * ts, tileW = Math.min(ts, cw - startX);
-// 					for (let ty = 0; ty < tileH; ty++) {
-// 						let rowIndex = ((startY + ty) * cw + startX) * 4;
-// 						for (let tx = 0; tx < tileW; tx++, rowIndex += 4) {
-// 							outData[ rowIndex ] = r;
-// 							outData[ rowIndex + 1 ] = g;
-// 							outData[ rowIndex + 2 ] = b;
-// 							outData[ rowIndex + 3 ] = a;
-// 						}
-// 					}
-// 				}
-// 			}
-// 		}
-//
-// 		this.log(`Mapped clustered data to layer in ${(performance.now() - start).toFixed(2)} ms`);
-// 		return layer;
-// 	}
+	mapClusteredToLayer(clusteredData, canvasW, canvasH, tileSize) {
+		const start = performance.now();
+		const layer = new Layer(canvasW, canvasH, `Layer ${this.layers.length}`);
+		const outData = layer.imageData.data;
+
+		if (tileSize === 1) {
+			outData.set(clusteredData);
+		} else {
+			const cw = canvasW, ch = canvasH, ts = tileSize;
+			const tempW = Math.ceil(cw / ts), tempH = Math.ceil(ch / ts);
+
+			for (let y = 0; y < tempH; y++) {
+				const startY = y * ts, tileH = Math.min(ts, ch - startY);
+				for (let x = 0; x < tempW; x++) {
+					const i = (y * tempW + x) * 4;
+					const [ r, g, b, a ] = clusteredData.slice(i, i + 4);
+					const startX = x * ts, tileW = Math.min(ts, cw - startX);
+					for (let ty = 0; ty < tileH; ty++) {
+						let rowIndex = ((startY + ty) * cw + startX) * 4;
+						for (let tx = 0; tx < tileW; tx++, rowIndex += 4) {
+							outData[ rowIndex ] = r;
+							outData[ rowIndex + 1 ] = g;
+							outData[ rowIndex + 2 ] = b;
+							outData[ rowIndex + 3 ] = a;
+						}
+					}
+				}
+			}
+		}
+
+		this.log(`Mapped clustered data to layer in ${(performance.now() - start).toFixed(2)} ms`);
+		return layer;
+	}
 
 // 	async applyQuantizeAndTile(img, colorCount = 16, tileSize = 10) {
 // 		if (!img || !this.dimensions) return;
@@ -337,19 +337,19 @@ export class CanvasManager {
 // 		this.log(`Quantization & tiling completed in ${(performance.now() - start).toFixed(2)} ms`);
 // 		console.log(palette, clusteredData)
 // 		return palette;
-	// 	}
+// 		}
 
 	async applyQuantizeAndTile(img, colorCount = 16, tileSize = 10) {
 		if (!img || !this.dimensions) return;
-		this.tileSize = tileSize;
+		this.tileSize = tileSize; //???????
 		const { width: canvasW, height: canvasH } = this.dimensions;
 
 		const start = performance.now();
 		this.log(`Starting quantization and tiling with colorCount=${colorCount}, tileSize=${tileSize}`);
 
 		// Determine quantization canvas size
-		const tempWidth = tileSize === 1 ? canvasW : Math.ceil(canvasW / tileSize);
-		const tempHeight = tileSize === 1 ? canvasH : Math.ceil(canvasH / tileSize);
+		const tempWidth = tileSize === 1 ? canvasW : canvasW / tileSize;
+		const tempHeight = tileSize === 1 ? canvasH :canvasH / tileSize;
 
 		// Downscale only if tileSize > 1
 		const tempCanvas = tileSize === 1
