@@ -3,7 +3,7 @@ MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
 import { initPixelator } from "./Pixelator.js";
-import "./ui-ux.js"
+import "./sidebarUI.js"
 
 
 const pixelStuff = initPixelator();

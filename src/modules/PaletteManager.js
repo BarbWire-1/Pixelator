@@ -50,6 +50,9 @@ export class PaletteManager {
 		const palette = Colors.smoothSort(this.getPixelData());
 		this.addDeselectSwatch();
 		palette.forEach((color) => this.addColorSwatch(color));
+
+
+
 	}
 
 	getPixelData() {
@@ -58,12 +61,12 @@ export class PaletteManager {
 		const colorMap = new Map();
 
 		for (let i = 0; i < data.length; i += 4) {
-			const r = data[ i ], g = data[ i + 1 ], b = data[ i + 2 ];
-			const key = (r << 16) | (g << 8) | b;
+			const r = data[ i ], g = data[ i + 1 ], b = data[ i + 2 ], a = data[ i + 3 ];
+			const key = (r << 24) | (g << 16) | (b << 8) | a; // include alpha in the key
 
 			let entry = colorMap.get(key);
 			if (!entry) {
-				entry = { r, g, b, pixels: [] };
+				entry = { r, g, b, a, pixels: [] };
 				colorMap.set(key, entry);
 				palette.push(entry);
 			}
@@ -73,6 +76,7 @@ export class PaletteManager {
 		return palette;
 	}
 
+
 	addDeselectSwatch() {
 		const deselectDiv = document.createElement("div");
 		deselectDiv.className = "swatch deselect";
@@ -81,8 +85,8 @@ export class PaletteManager {
 	}
 
 	addColorSwatch(colorData) {
-		const { r, g, b, pixels } = colorData;
-
+		const { r, g, b, a,pixels } = colorData;
+		if (r + g + b + a === 0) return; // skip fully transparent black
 		// Clone the template
 		const div = this.swatchTemplate.content.firstElementChild.cloneNode(true);
 		div.style.backgroundColor = `rgb(${r},${g},${b})`;
@@ -99,7 +103,7 @@ export class PaletteManager {
 		};
 
 		this.swatches.push(swatch);
-		// Attach listeners via a class method
+		// attach listeners in here later delegate(?) or keep here??
 		this.attachSwatchListeners(swatch);
 
 		return swatch;
@@ -209,7 +213,7 @@ export class PaletteManager {
 
 		this.colorPicker.value = this.rgbToHex(r, g, b);
 		this.cm.recolorPixels(this.selectedSwatch.pixels, r, g, b, log);
-		
+
 	}
 
 	//=========================

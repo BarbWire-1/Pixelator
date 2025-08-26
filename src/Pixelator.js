@@ -30,7 +30,8 @@ export function initPixelator() {
 		quantizeTileBtn: document.getElementById("quantize-tile-btn"),
 		zoomInput: document.getElementById("zoom"),
 		undoBtn: document.getElementById("undoBtn"),
-		redoBtn: document.getElementById("redoBtn")
+		redoBtn: document.getElementById("redoBtn"),
+		alphaCheck: document.getElementById('alpha')
 	};
 	const logPanel = document.getElementById("log-panel");
 
@@ -53,7 +54,7 @@ export function initPixelator() {
 	);
 
 
-
+elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.checked)
 	document.getElementById("downloadBtn")
 		.addEventListener('click', () => {
 			console.log("clicked dl")

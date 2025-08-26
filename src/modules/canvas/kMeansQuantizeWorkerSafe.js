@@ -12,11 +12,20 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 // then map all original pixels to the nearest centroid.
 // This makes it MUCH faster while preserving overall color fidelity.
 
-// kMeansQuantizeWorkerSafe.js
+
 // Expects imageData (Uint8ClampedArray) instead of <img>
-// alphaMode: "ignore" | "handle"
-export async function kMeansQuantize(imageData, k = 16, iterations = 10, alphaMode = "handle") {
-	const stride = alphaMode === "handle" ? 4 : 3;
+/**
+ * Performs k-means color quantization on an image.
+ *
+ * @param {ImageData} imageData - The image data to quantize.
+ * @param {number} [k=16] - Number of colors to reduce to.
+ * @param {number} [iterations=10] - Number of k-means iterations.
+ * @param {boolean} [allOpaque=false] - If true, treats all pixels as fully opaque (ignores alpha channel).
+ * @returns {{ palette: number[][], clusteredData: Uint8ClampedArray, uniqueCount: number }}
+ *          Returns the generated palette, clustered image data, and the count of unique colors.
+ */
+export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaque = false) {
+	const stride = allOpaque ? 3 : 4;
 	const pixels = new Uint8Array((imageData.data.length / 4) * stride);
 	const uniqueColors = new Set();
 
@@ -31,7 +40,7 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, alphaMo
 		pixels[ pIndex++ ] = r;
 		pixels[ pIndex++ ] = g;
 		pixels[ pIndex++ ] = b;
-		if (alphaMode === "handle") {
+		if (!allOpaque) {
 			pixels[ pIndex++ ] = a;
 			uniqueColors.add((r << 24) | (g << 16) | (b << 8) | a);
 		} else {
@@ -46,7 +55,7 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, alphaMo
 	const usedKeys = new Set();
 	while (palette.length < actualK) {
 		const idx = Math.floor(Math.random() * (pIndex / stride)) * stride;
-		const key = alphaMode === "handle"
+		const key = !allOpaque
 			? ((pixels[ idx ] << 24) | (pixels[ idx + 1 ] << 16) | (pixels[ idx + 2 ] << 8) | pixels[ idx + 3 ])
 			: ((pixels[ idx ] << 16) | (pixels[ idx + 1 ] << 8) | pixels[ idx + 2 ]);
 
@@ -124,8 +133,7 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, alphaMo
 		clusteredData[ i + 2 ] = (a === 0) ? b : palette[ best ][ 2 ];
 		clusteredData[ i + 3 ] = (a === 0)
 			? 0
-			: (alphaMode === "ignore" ? 255 : (palette[ best ][ 3 ] ?? 255));
-
+			: (allOpaque ? 255 : (palette[ best ][ 3 ] ?? 255));
 	}
 
 	return { palette, clusteredData, uniqueCount: uniqueColors.size };
