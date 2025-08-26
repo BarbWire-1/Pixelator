@@ -241,11 +241,11 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 
 	function setupTileAndColorInputs() {
 		elements.liveUpdateInput.addEventListener('change', (e) => cm.liveUpdate = e.target.checked)
-		elements.tileSizeInput.addEventListener("change", (e) => {
+		elements.tileSizeInput.addEventListener("change",async (e) => {
 			cm.tileSize = parseInt(e.target.value, 10) || 1;
 			tool.tileSize = cm.tileSize;
 			if (cm.liveUpdate) {
-				cm.applyQuantizeAndTile(); pm.createPalette(); snapshot('Live update')
+				await cm.applyQuantizeAndTile(); pm.createPalette(); snapshot('Live update')
 			} else {
 				cm.redraw()
 			}

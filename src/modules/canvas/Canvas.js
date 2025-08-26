@@ -43,7 +43,7 @@ export class CanvasManager {
 		this.showLogs = true;
 		this.allOpaque = false;
 
-		this.liveUpdate = true;
+		this.liveUpdate = false;
 
 		this.kMeansIterations = 1;
 		this.worker = null;
@@ -241,8 +241,9 @@ export class CanvasManager {
 		const t0 = performance.now();
 		this.log(`quantizeImage: start, tileSize=${this.tileSize}, colorCount=${this.colorCount}`);
 
-		const tempWidth = this.tileSize === 1 ? canvasW :(canvasW / this.tileSize);
-		const tempHeight = this.tileSize === 1 ? canvasH : (canvasH / this.tileSize);
+		const tempWidth = this.tileSize === 1 ? canvasW : Math.ceil(canvasW / this.tileSize);
+		const tempHeight = this.tileSize === 1 ? canvasH : Math.ceil(canvasH / this.tileSize);
+
 
 		const tempCanvas = this.createTempCanvas(
 			this.rawImage,
@@ -301,7 +302,12 @@ export class CanvasManager {
 			this.log(`applyTileSize: temp canvas creation done in ${(performance.now() - tStart).toFixed(2)} ms`);
 
 			const tScale = performance.now();
-			ctx.drawImage(tinyCanvas, 0, 0, tempWidth, tempHeight, 0, 0, canvasW, canvasH);
+			ctx.drawImage(
+				tinyCanvas,
+				0, 0, tempWidth, tempHeight,
+				0, 0, tempWidth * this.tileSize, tempHeight * this.tileSize
+			);
+
 			layer.imageData.data.set(ctx.getImageData(0, 0, canvasW, canvasH).data);
 			this.log(`applyTileSize: scaled clusteredData in ${(performance.now() - tScale).toFixed(2)} ms`);
 		}
@@ -330,7 +336,7 @@ export class CanvasManager {
 
 		this.log(`applyQuantizeAndTile: complete in ${(performance.now() - t0).toFixed(2)} ms`);
 
-		
+
 	}
 
 
@@ -545,8 +551,8 @@ CanvasManager.prototype.reQuantize = async function ({
 
 	const tempCanvas = this.createTempCanvas(
 		sourceImg,
-		Math.ceil(this.dimensions.width / tileSize),
-		Math.ceil(this.dimensions.height / tileSize)
+		(this.dimensions.width / tileSize),
+		(this.dimensions.height / tileSize)
 	);
 
 	let clusteredData, palette;
