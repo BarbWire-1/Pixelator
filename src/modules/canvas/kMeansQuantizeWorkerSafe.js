@@ -12,7 +12,7 @@ function getColorAt(data, index) {
 	data[ index + 2 ] = b;
 	data[ index + 3 ] = a;
 }
-//TODO added a key to handle alpha. Add UI checkbox to switch!!!
+//TODO added a key to handle alpha. Add UI checkbox to switch!!!:::::::
 // Switched to stay all in rgb - much quicker then converting forth and back:
 
 // K-means color quantization.
