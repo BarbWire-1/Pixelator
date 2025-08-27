@@ -30,7 +30,7 @@ function getColorAt(data, index) {
  * @param {number} [iterations=10] - Number of k-means iterations.
  * @param {boolean} [allOpaque=false] - If true, treats all pixels as fully opaque (ignores alpha channel).
  * @returns {{ palette: number[][], clusteredData: Uint8ClampedArray, uniqueCount: number }}
- *          Returns the generated palette, clustered image data, and the count of unique colors.
+ * Returns the generated palette, clustered image data, and the count of unique colors.
  */
 export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaque = false) {
 
