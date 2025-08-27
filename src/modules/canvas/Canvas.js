@@ -294,7 +294,7 @@ export class CanvasManager {
 	// --------------------
 	// Pixel editing
 	// --------------------
-	_updatePixels(pixels, fn) {
+	applyBatchToPixels(pixels, fn) {
 		if (!this.activeLayer) return;
 		const data = this.activeLayer.imageData.data;
 		pixels.forEach(p => fn(data, p.index));
@@ -302,12 +302,12 @@ export class CanvasManager {
 	}
 
 	erasePixels(pixels) {
-		this._updatePixels(pixels, (data, idx) => data[ idx + 3 ] = 0);
+		this.applyBatchToPixels(pixels, (data, idx) => data[ idx + 3 ] = 0);
 		this.log(`Erased ${pixels.length} pixels`);
 	}
 
 	recolorPixels(pixels, r, g, b, log = true) {
-		this._updatePixels(pixels, (data, idx) => {
+		this.applyBatchToPixels(pixels, (data, idx) => {
 			data[ idx ] = r;
 			data[ idx + 1 ] = g;
 			data[ idx + 2 ] = b;
