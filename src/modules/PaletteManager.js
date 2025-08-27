@@ -4,6 +4,7 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
 
 import { snapshot } from "../main.js";
+import { smoothSort } from "./smoothSort.js";
 
 export class PaletteManager {
 	constructor (canvasManager, swatchesContainer, colorPickerEl) {
@@ -39,15 +40,22 @@ export class PaletteManager {
 		this.clearPaletteContainer();
 		this.addDeselectSwatch();
 
-		this.cm.activeLayer.colorClusters.forEach(({ color }) => {
-			this.addColorSwatch({
-				r: color[ 0 ],
-				g: color[ 1 ],
-				b: color[ 2 ],
-				a: color[ 3 ]
-			});
+		// Extract colors
+		const palette = this.cm.activeLayer.colorClusters.map(({ color }) => ({
+			r: color[ 0 ],
+			g: color[ 1 ],
+			b: color[ 2 ],
+			a: color[ 3 ]
+		}));
+
+		// Sort them perceptually
+		const sorted = smoothSort(palette);
+
+		sorted.forEach(color => {
+			this.addColorSwatch(color);
 		});
 	}
+
 
 	addDeselectSwatch() {
 		const deselectDiv = document.createElement("div");

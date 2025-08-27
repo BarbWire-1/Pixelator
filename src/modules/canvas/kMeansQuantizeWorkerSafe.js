@@ -32,11 +32,6 @@ function getColorAt(data, index) {
  * @returns {{ palette: number[][], clusteredData: Uint8ClampedArray, uniqueCount: number }}
  *          Returns the generated palette, clustered image data, and the count of unique colors.
  */
-
-
-
-
-// //________________________________________________
 export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaque = false) {
 
 
@@ -47,34 +42,34 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaq
 	let pIndex = 0;
 	for (let i = 0; i < imageData.data.length; i += 4) {
 		// direct handle
-// 		const r = imageData.data[ i ];
-// 		const g = imageData.data[ i + 1 ];
-// 		const b = imageData.data[ i + 2 ];
-// 		const a = imageData.data[ i + 3 ];
-//
-// 		pixels[ pIndex++ ] = r;
-// 		pixels[ pIndex++ ] = g;
-// 		pixels[ pIndex++ ] = b;
-// 		if (!allOpaque) pixels[ pIndex++ ] = a;
-//
-// 		if (allOpaque) {
-// 			uniqueColors.add((r << 16) | (g << 8) | b);
-// 		} else {
-// 			uniqueColors.add((r << 24) | (g << 16) | (b << 8) | a);
-// 		}
+		const r = imageData.data[ i ];
+		const g = imageData.data[ i + 1 ];
+		const b = imageData.data[ i + 2 ];
+		const a = imageData.data[ i + 3 ];
+
+		pixels[ pIndex++ ] = r;
+		pixels[ pIndex++ ] = g;
+		pixels[ pIndex++ ] = b;
+		if (!allOpaque) pixels[ pIndex++ ] = a;
+
+		if (allOpaque) {
+			uniqueColors.add((r << 16) | (g << 8) | b);
+		} else {
+			uniqueColors.add((r << 24) | (g << 16) | (b << 8) | a);
+		}
 
 // using named functions for clarity and readability
-		const { r, g, b, a } = getColorAt(imageData.data, i);
-
-		// Write directly to flat pixel array, forcing alpha if needed
-		setColorAt(pixels, pIndex, { r, g, b, a: allOpaque ? 255 : a });
-		pIndex += stride;
-
-		// Track unique colors
-		const key = allOpaque
-			? (r << 16) | (g << 8) | b// 24 bit
-			: (r << 24) | (g << 16) | (b << 8) | a;// 32 bit
-		uniqueColors.add(key);
+// 		const { r, g, b, a } = getColorAt(imageData.data, i);
+//
+// 		// Write directly to flat pixel array, forcing alpha if needed
+// 		setColorAt(pixels, pIndex, { r, g, b, a: allOpaque ? 255 : a });
+// 		pIndex += stride;
+//
+// 		// Track unique colors
+// 		const key = allOpaque
+// 			? (r << 16) | (g << 8) | b// 24 bit
+// 			: (r << 24) | (g << 16) | (b << 8) | a;// 32 bit
+// 		uniqueColors.add(key);
 	}
 
 
@@ -166,125 +161,6 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaq
 			? 0
 			: (allOpaque ? 255 : (palette[ best ][ 3 ] ?? 255));
 	}
-console.log()
+
 	return { palette,  clusteredData, uniqueCount: uniqueColors.size, clusters };
 }
-
-
-
-///////////////
-// TEST ------------------
-// function getColorAt(data, index) {
-// 	return { r: data[ index ], g: data[ index + 1 ], b: data[ index + 2 ], a: data[ index + 3 ] };
-// }
-//
-// function setColorAt(data, index, { r, g, b, a }) {
-// 	data[ index ] = r;
-// 	data[ index + 1 ] = g;
-// 	data[ index + 2 ] = b;
-// 	data[ index + 3 ] = a;
-// }
-//
-// function forEachPixel(imageData, fn) {
-// 	for (let i = 0; i < imageData.data.length; i += 4) {
-// 		const color = getColorAt(imageData.data, i);
-// 		fn(i, color);
-// 	}
-// }
-//
-// function rgbaKey({ r, g, b, a }) {
-// 	return (r << 24) | (g << 16) | (b << 8) | a;
-// }
-//
-// function rgbaKeyOpaque({ r, g, b }) {
-// 	return (r << 16) | (g << 8) | b;
-// }
-//
-//
-// function distanceSq(c1, c2, stride) {
-// 	let d = (c1.r - c2[ 0 ]) ** 2 + (c1.g - c2[ 1 ]) ** 2 + (c1.b - c2[ 2 ]) ** 2;
-// 	if (stride === 4) d += (c1.a - (c2[ 3 ] ?? 255)) ** 2;
-// 	return d;
-// }
-//
-// export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaque = false) {
-// 	const stride = allOpaque ? 3 : 4;
-// 	const pixels = new Uint8Array((imageData.data.length / 4) * stride);
-// 	const uniqueColors = new Set();
-// 	let pIndex = 0;
-//
-// 	// extract pixels into flat array
-// 	forEachPixel(imageData, (_, color) => {
-// 		color.a = allOpaque ? 255 : color.a;
-// 		setColorAt(pixels, pIndex, color);
-// 		pIndex += stride;
-// 		uniqueColors.add(rgbaKey(color, allOpaque));
-// 	});
-//
-// 	const actualK = Math.min(k, uniqueColors.size);
-//
-// 	// initialize palette randomly
-// 	const palette = [];
-// 	const usedKeys = new Set();
-// 	while (palette.length < actualK) {
-// 		const idx = Math.floor(Math.random() * (pIndex / stride)) * stride;
-// 		const r = pixels[ idx ];
-// 		const g = pixels[ idx + 1 ];
-// 		const b = pixels[ idx + 2 ];
-// 		const a = stride === 4 ? pixels[ idx + 3 ] : 255;
-//
-// 		const key = stride === 4 ? rgbaKey({ r, g, b, a }) : rgbaKeyOpaque({ r, g, b });
-//
-// 		if (!usedKeys.has(key)) {
-// 			const entry = [];
-// 			for (let s = 0; s < stride; s++) entry.push(pixels[ idx + s ]);
-// 			palette.push(entry);
-// 			usedKeys.add(key);
-// 		}
-// 	}
-//
-// 	// K-means iterations
-// 	const clusters = Array.from({ length: actualK }, () => []);
-// 	const clusterSums = Array.from({ length: actualK }, () => new Array(stride).fill(0));
-//
-// 	for (let iter = 0; iter < iterations; iter++) {
-// 		clusters.forEach(c => c.length = 0);
-// 		clusterSums.forEach(s => s.fill(0));
-//
-// 		for (let i = 0; i < pIndex; i += stride) {
-// 			const color = { r: pixels[ i ], g: pixels[ i + 1 ], b: pixels[ i + 2 ], a: stride === 4 ? pixels[ i + 3 ] : 255 };
-// 			let best = 0, bestDist = Infinity;
-//
-// 			palette.forEach((c, j) => {
-// 				const d = distanceSq(color, c, stride);
-// 				if (d < bestDist) { bestDist = d; best = j; }
-// 			});
-//
-// 			clusters[ best ].push(i);
-// 			for (let s = 0; s < stride; s++) clusterSums[ best ][ s ] += pixels[ i + s ];
-// 		}
-//
-// 		// update centroids
-// 		clusters.forEach((cluster, j) => {
-// 			if (!cluster.length) return;
-// 			for (let s = 0; s < stride; s++) palette[ j ][ s ] = Math.round(clusterSums[ j ][ s ] / cluster.length);
-// 		});
-// 	}
-//
-// 	// Map back to clustered imageData
-// 	const clusteredData = new Uint8ClampedArray(imageData.data.length);
-// 	forEachPixel(imageData, (i, color) => {
-// 		let best = 0, bestDist = Infinity;
-// 		palette.forEach((c, j) => {
-// 			const d = distanceSq(color, c, stride);
-// 			if (d < bestDist) { bestDist = d; best = j; }
-// 		});
-//
-// 		clusteredData[ i ] = color.a === 0 ? color.r : palette[ best ][ 0 ];
-// 		clusteredData[ i + 1 ] = color.a === 0 ? color.g : palette[ best ][ 1 ];
-// 		clusteredData[ i + 2 ] = color.a === 0 ? color.b : palette[ best ][ 2 ];
-// 		clusteredData[ i + 3 ] = color.a === 0 ? 0 : (allOpaque ? 255 : (palette[ best ][ 3 ] ?? 255));
-// 	});
-//
-// 	return { palette, clusteredData, uniqueCount: uniqueColors.size };
-// }
