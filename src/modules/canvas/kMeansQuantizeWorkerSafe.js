@@ -166,8 +166,8 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaq
 			? 0
 			: (allOpaque ? 255 : (palette[ best ][ 3 ] ?? 255));
 	}
-
-	return { palette, clusteredData, uniqueCount: uniqueColors.size };
+console.log()
+	return { palette,  clusteredData, uniqueCount: uniqueColors.size, clusters };
 }
 
 

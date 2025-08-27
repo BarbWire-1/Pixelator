@@ -69,8 +69,8 @@ export class CanvasManager {
 			const imageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
 
 			const handler = (e) => {
-				const { success, palette, clusteredData, uniqueCount, error } = e.data;
-				if (success) resolve({ palette, clusteredData, uniqueCount });
+				const { success, palette, clusters,clusteredData, uniqueCount, error } = e.data;
+				if (success) resolve({ palette, clusters,clusteredData, uniqueCount });
 				else reject(new Error(error));
 				this.worker.removeEventListener("message", handler);
 			};
@@ -80,6 +80,7 @@ export class CanvasManager {
 			this.worker.postMessage({
 				imageData,
 				colorCount,
+			
 				iterations: this.kMeansIterations,
 				allOpaque: this.allOpaque
 			});
@@ -243,7 +244,13 @@ export class CanvasManager {
 		const tempCanvas = this.createTempCanvas(rawImage, tempWidth, tempHeight, false);
 
 		// Run kMeans quantization
-		const { palette, clusteredData, uniqueCount } = await this.runQuantizationInWorker(tempCanvas, this.colorCount);
+		const { palette, clusters, clusteredData, uniqueCount } = await this.runQuantizationInWorker(tempCanvas, this.colorCount);
+
+
+		layer.colorClusters = palette.map((color, i) => ({
+			color,        // Uint8Array([r,g,b,a])
+			indices: clusters[ i ] // pixel indices
+		}));
 
 		// Store results in layer
 		Object.assign(layer, {
