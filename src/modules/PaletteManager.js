@@ -37,6 +37,8 @@ export class PaletteManager {
 	//=========================
 	createPalette() {
 		if (!this.cm.activeLayer || !this.cm.activeLayer.colorClusters) return;
+
+		//console.log(this.cm.activeLayer.colorClusters)
 		this.clearPaletteContainer();
 		this.addDeselectSwatch();
 
@@ -200,6 +202,7 @@ export class PaletteManager {
 	// Unified operations:
 	highlightSwatch(swatch) {
 		const pixels = this.getPixels(swatch);
+
 		if (!pixels.length) return;
 		this.applyPixels(pixels, { r: 0, g: 255, b: 255 });
 		this.drawBoundingBox(pixels);

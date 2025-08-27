@@ -2,11 +2,15 @@
 MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
+/*
+MIT License
+Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
+*/
 function getColorAt(data, index) {
 	return { r: data[ index ], g: data[ index + 1 ], b: data[ index + 2 ], a: data[ index + 3 ] };
 }
 
- function setColorAt(data, index, { r, g, b, a }) {
+function setColorAt(data, index, { r, g, b, a }) {
 	data[ index ] = r;
 	data[ index + 1 ] = g;
 	data[ index + 2 ] = b;
@@ -34,7 +38,7 @@ function getColorAt(data, index) {
  */
 export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaque = false) {
 
-
+	console.log(imageData.data.length / 4)
 	const stride = allOpaque ? 3 : 4; // allocated // number of array slots per pixel (RGB or RGBA)
 	const pixels = new Uint8Array((imageData.data.length / 4) * stride);
 	const uniqueColors = new Set();
@@ -58,18 +62,18 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaq
 			uniqueColors.add((r << 24) | (g << 16) | (b << 8) | a);
 		}
 
-// using named functions for clarity and readability
-// 		const { r, g, b, a } = getColorAt(imageData.data, i);
-//
-// 		// Write directly to flat pixel array, forcing alpha if needed
-// 		setColorAt(pixels, pIndex, { r, g, b, a: allOpaque ? 255 : a });
-// 		pIndex += stride;
-//
-// 		// Track unique colors
-// 		const key = allOpaque
-// 			? (r << 16) | (g << 8) | b// 24 bit
-// 			: (r << 24) | (g << 16) | (b << 8) | a;// 32 bit
-// 		uniqueColors.add(key);
+		// using named functions for clarity and readability
+		// 		const { r, g, b, a } = getColorAt(imageData.data, i);
+		//
+		// 		// Write directly to flat pixel array, forcing alpha if needed
+		// 		setColorAt(pixels, pIndex, { r, g, b, a: allOpaque ? 255 : a });
+		// 		pIndex += stride;
+		//
+		// 		// Track unique colors
+		// 		const key = allOpaque
+		// 			? (r << 16) | (g << 8) | b// 24 bit
+		// 			: (r << 24) | (g << 16) | (b << 8) | a;// 32 bit
+		// 		uniqueColors.add(key);
 	}
 
 
@@ -162,5 +166,137 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaq
 			: (allOpaque ? 255 : (palette[ best ][ 3 ] ?? 255));
 	}
 
-	return { palette,  clusteredData, uniqueCount: uniqueColors.size, clusters };
+	return { palette, clusteredData, uniqueCount: uniqueColors.size, clusters };
+}
+export async function kMeansQuantizeBloated(imageData, k = 16, iterations = 10, canvasW, canvasH, allOpaque = false) {
+	const smallW = imageData.width;
+	const smallH = imageData.height;
+
+	const stride = allOpaque ? 3 : 4;
+	const pixels = new Uint8Array((smallW * smallH) * stride);
+	const uniqueColors = new Set();
+
+	let pIndex = 0;
+	for (let i = 0; i < imageData.data.length; i += 4) {
+		const r = imageData.data[ i ];
+		const g = imageData.data[ i + 1 ];
+		const b = imageData.data[ i + 2 ];
+		const a = imageData.data[ i + 3 ];
+
+		pixels[ pIndex++ ] = r;
+		pixels[ pIndex++ ] = g;
+		pixels[ pIndex++ ] = b;
+		if (!allOpaque) pixels[ pIndex++ ] = a;
+
+		const key = allOpaque
+			? (r << 16 | g << 8 | b)
+			: (r << 24 | g << 16 | b << 8 | a);
+		uniqueColors.add(key);
+	}
+
+	const actualK = Math.min(k, uniqueColors.size);
+
+	// Initialize palette randomly
+	const palette = [];
+	const usedKeys = new Set();
+	while (palette.length < actualK) {
+		const idx = Math.floor(Math.random() * (pIndex / stride)) * stride;
+		const key = !allOpaque
+			? ((pixels[ idx ] << 24) | (pixels[ idx + 1 ] << 16) | (pixels[ idx + 2 ] << 8) | pixels[ idx + 3 ])
+			: ((pixels[ idx ] << 16) | (pixels[ idx + 1 ] << 8) | (pixels[ idx + 2 ]));
+		if (!usedKeys.has(key)) {
+			const entry = [];
+			for (let s = 0; s < stride; s++) entry.push(pixels[ idx + s ]);
+			palette.push(entry);
+			usedKeys.add(key);
+		}
+	}
+
+	// K-means clustering
+	const clusters = Array.from({ length: actualK }, () => []);
+	const clusterSums = Array.from({ length: actualK }, () => new Array(stride).fill(0));
+
+	for (let iter = 0; iter < iterations; iter++) {
+		for (let c = 0; c < actualK; c++) {
+			clusters[ c ].length = 0;
+			clusterSums[ c ].fill(0);
+		}
+
+		for (let i = 0; i < pIndex; i += stride) {
+			const pr = pixels[ i ], pg = pixels[ i + 1 ], pb = pixels[ i + 2 ];
+			const pa = stride === 4 ? pixels[ i + 3 ] : 255;
+
+			let best = 0, bestDist = Infinity;
+			for (let j = 0; j < actualK; j++) {
+				const c = palette[ j ];
+				const dr = pr - c[ 0 ], dg = pg - c[ 1 ], db = pb - c[ 2 ];
+				let d = dr * dr + dg * dg + db * db;
+				if (stride === 4) d += (pa - (c[ 3 ] ?? 255)) ** 2;
+				if (d < bestDist) { bestDist = d; best = j; }
+			}
+			clusters[ best ].push(i);
+			for (let s = 0; s < stride; s++) clusterSums[ best ][ s ] += pixels[ i + s ];
+		}
+
+		// Update centroids
+		for (let j = 0; j < actualK; j++) {
+			const cluster = clusters[ j ];
+			if (!cluster.length) continue;
+			for (let s = 0; s < stride; s++) {
+				palette[ j ][ s ] = Math.round(clusterSums[ j ][ s ] / cluster.length);
+			}
+		}
+	}
+
+	// Build clusteredData for small canvas
+	const clusteredData = new Uint8ClampedArray(imageData.data.length);
+	for (let i = 0; i < imageData.data.length; i += 4) {
+		const r = imageData.data[ i ], g = imageData.data[ i + 1 ], b = imageData.data[ i + 2 ], a = imageData.data[ i + 3 ];
+
+		let best = 0, bestDist = Infinity;
+		for (let j = 0; j < actualK; j++) {
+			const c = palette[ j ];
+			let d = (r - c[ 0 ]) ** 2 + (g - c[ 1 ]) ** 2 + (b - c[ 2 ]) ** 2;
+			if (stride === 4) d += (a - (c[ 3 ] ?? 255)) ** 2;
+			if (d < bestDist) { bestDist = d; best = j; }
+		}
+
+		clusteredData[ i ] = a === 0 ? r : palette[ best ][ 0 ];
+		clusteredData[ i + 1 ] = a === 0 ? g : palette[ best ][ 1 ];
+		clusteredData[ i + 2 ] = a === 0 ? b : palette[ best ][ 2 ];
+		clusteredData[ i + 3 ] = a === 0 ? 0 : (allOpaque ? 255 : (palette[ best ][ 3 ] ?? 255));
+	}
+
+	// 🟢 Bloat clusters to full canvas
+	const bloatedClusters = clusters.map(() => []);
+	const factorX = canvasW / smallW;
+	const factorY = canvasH / smallH;
+
+	for (let c = 0; c < clusters.length; c++) {
+		const smallIndices = clusters[ c ];
+		for (const idxSmall of smallIndices) {
+			const x = (idxSmall / stride) % smallW;
+			const y = Math.floor(idxSmall / stride / smallW);
+
+			const startX = Math.floor(x * factorX);
+			const startY = Math.floor(y * factorY);
+			const endX = Math.ceil((x + 1) * factorX);
+			const endY = Math.ceil((y + 1) * factorY);
+
+			for (let by = startY; by < endY; by++) {
+				for (let bx = startX; bx < endX; bx++) {
+					const idxBig = (by * canvasW + bx) * 4;
+					bloatedClusters[ c ].push(idxBig);
+				}
+			}
+		}
+	}
+
+	// Build colorClusters directly usable in PaletteManager
+	const colorClusters = palette.map((color, i) => ({
+		color: new Uint8Array(color),
+		indices: bloatedClusters[ i ]
+	}));
+
+	return { palette, clusteredData, uniqueCount: uniqueColors.size, colorClusters };
 }
