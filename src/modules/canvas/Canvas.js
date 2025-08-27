@@ -246,7 +246,7 @@ export class CanvasManager {
 		// Run kMeans quantization
 		const { palette, clusters, clusteredData, uniqueCount } = await this.runQuantizationInWorker(tempCanvas, this.colorCount);
 
-
+		layer.colorClusters = []; // <-- ensures it's always iterable
 		layer.colorClusters = palette.map((color, i) => ({
 			color,        // Uint8Array([r,g,b,a])
 			indices: clusters[ i ] // pixel indices

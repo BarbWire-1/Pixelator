@@ -8,7 +8,7 @@ import { snapshot } from '../main.js';
 // Mixing these up will silently break drawing & fill.
 // Spent HOURS in the rabbit hole on this one!
 
-
+// TODO - currently decided AGAINST writing changes to cluster, so drawing is lost on re-quantize. Later maybe use layers to preserve drawing as separate layer(s)
 export class DrawingTool {
 	constructor (cm, colorPicker, modeSelect, displayEl) {
 		this.cm = cm;
