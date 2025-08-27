@@ -69,28 +69,13 @@ export class PaletteManager {
 		this.swatches.push(swatch);
 
 		this.attachSwatchListeners(swatch);
-	
 		return swatch;
 	}
 
 	attachSwatchListeners(swatch) {
-		const applyHighlight = () => {
-			const pixels = this.getPixels(swatch);
-			this.cm.recolorPixels(pixels, 0, 255, 255, false); // highlight neon
-			this.cm.drawBoundingBox(pixels); // show bbox while holding
-		};
-
-		const resetColor = () => {
-			const pixels = this.getPixels(swatch);
-			this.cm.recolorPixels(pixels, swatch.r, swatch.g, swatch.b, false);
-			this.cm.redraw(); // remove bbox after release
-		};
-
-		swatch.div.addEventListener("mousedown", applyHighlight);
-		swatch.div.addEventListener("mouseup", resetColor);
-		swatch.div.addEventListener("mouseleave", resetColor); // cancel if mouse leaves
+		swatch.div.addEventListener("mousedown", () => this.highlightSwatch(swatch));
+		swatch.div.addEventListener("mouseup", () => this.resetSwatchColor(swatch));
 	}
-
 
 	clearPaletteContainer() {
 		this.container.innerHTML = "";
@@ -122,9 +107,8 @@ export class PaletteManager {
 		swatch.div.classList.add("selected");
 		this.selectedSwatch = swatch;
 
-		const pixels = this.getPixels(swatch);
 		this.cm.redraw();
-		this.cm.drawBoundingBox(pixels);
+		this.drawBoundingBox(swatch);
 
 		const hex = this.colorPicker.value = this.rgbToHex(swatch.r, swatch.g, swatch.b);
 		this.updateHexDisplay(hex);
@@ -155,43 +139,101 @@ export class PaletteManager {
 	getPixels(swatchOrColor) {
 		if (!this.cm.activeLayer || !this.cm.activeLayer.colorClusters) return [];
 
-		const { r, g, b } = swatchOrColor;
-		const cluster = this.cm.activeLayer.colorClusters.find(c =>
-			c.color[ 0 ] === r && c.color[ 1 ] === g && c.color[ 2 ] === b
-		);
-		return cluster ? cluster.indices.map(i => ({ index: i })) : [];
+		if (swatchOrColor?.r != null && swatchOrColor?.g != null && swatchOrColor?.b != null) {
+			const cluster = this.cm.activeLayer.colorClusters.find(c =>
+				c.color[ 0 ] === swatchOrColor.r &&
+				c.color[ 1 ] === swatchOrColor.g &&
+				c.color[ 2 ] === swatchOrColor.b
+			);
+			if (cluster) return cluster.indices.map(i => ({ index: i }));
+		}
+
+		return [];
+	}
+
+	applyPixels(pixels, { r = null, g = null, b = null, erase = false } = {}) {
+		if (!pixels.length || !this.cm.activeLayer) return;
+
+		const data = this.cm.activeLayer.imageData.data;
+		for (const p of pixels) {
+			const idx = p.index;
+			if (erase) {
+				data[ idx + 3 ] = 0;
+			} else {
+				data[ idx ] = r;
+				data[ idx + 1 ] = g;
+				data[ idx + 2 ] = b;
+				data[ idx + 3 ] = 255;
+			}
+		}
+		this.cm.redraw();
+	}
+
+	drawBoundingBox(pixels, color = "limegreen") {
+		if (!pixels.length) return;
+
+		let minX = this.cm.canvas.width, maxX = -1, minY = this.cm.canvas.height, maxY = -1;
+		for (const p of pixels) {
+			const idx = p.index / 4;
+			const x = idx % this.cm.canvas.width;
+			const y = Math.floor(idx / this.cm.canvas.width);
+			minX = Math.min(minX, x);
+			maxX = Math.max(maxX, x);
+			minY = Math.min(minY, y);
+			maxY = Math.max(maxY, y);
+		}
+
+		const ctx = this.cm.ctx;
+		ctx.strokeStyle = color;
+		ctx.lineWidth = 1;
+		ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+	}
+
+	// Unified operations:
+	highlightSwatch(swatch) {
+		const pixels = this.getPixels(swatch);
+		if (!pixels.length) return;
+		this.applyPixels(pixels, { r: 0, g: 255, b: 255 });
+		this.drawBoundingBox(pixels);
+	}
+
+	resetSwatchColor(swatch) {
+		const pixels = this.getPixels(swatch);
+		if (!pixels.length) return;
+		this.applyPixels(pixels, { r: swatch.r, g: swatch.g, b: swatch.b });
 	}
 
 	eraseSelectedPixels() {
 		if (!this.selectedSwatch) return;
 		const pixels = this.getPixels(this.selectedSwatch);
-		this.cm.erasePixels(pixels);
+		if (!pixels.length) return;
+		this.applyPixels(pixels, { erase: true });
 		this.selectedSwatch.div.classList.add("erased");
 		snapshot("Erase selected swatch");
 	}
 
-	recolorSelectedPixels(r, g, b, log = true) {
+	recolorSelectedPixels(r, g, b) {
 		if (!this.selectedSwatch) return;
-
 		const sw = this.selectedSwatch;
-
-		// Get old pixels
 		const pixels = this.getPixels(sw);
-
-		// Recolor in canvas
-		this.cm.recolorPixels(pixels, r, g, b, log);
+		if (!pixels.length) return;
 
 		// Update cluster in layer
 		const cluster = this.cm.activeLayer.colorClusters.find(c =>
 			c.color[ 0 ] === sw.r && c.color[ 1 ] === sw.g && c.color[ 2 ] === sw.b
 		);
-		if (cluster) cluster.color = [ r, g, b, cluster.color[ 3 ] ]; // preserve alpha
+		if (cluster) cluster.color = new Uint8Array([ r, g, b, 255 ]);
 
-		// Update swatch
-		sw.r = r; sw.g = g; sw.b = b;
+		// Update swatch and pixels
+		sw.r = r;
+		sw.g = g;
+		sw.b = b;
+		this.applyPixels(pixels, { r, g, b });
+
 		sw.div.style.backgroundColor = `rgb(${r},${g},${b})`;
 		this.colorPicker.value = this.rgbToHex(r, g, b);
 	}
+
 
 	//=========================
 	// HISTORY SUPPORT

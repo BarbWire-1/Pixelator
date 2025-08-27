@@ -80,7 +80,7 @@ export class CanvasManager {
 			this.worker.postMessage({
 				imageData,
 				colorCount,
-			
+
 				iterations: this.kMeansIterations,
 				allOpaque: this.allOpaque
 			});
@@ -293,68 +293,6 @@ export class CanvasManager {
 
 	}
 
-
-
-
-
-
-	// --------------------
-	// Pixel editing
-	// --------------------
-	applyBatchToPixels(pixels, fn) {
-		if (!this.activeLayer) return;
-		const data = this.activeLayer.imageData.data;
-		pixels.forEach(p => fn(data, p.index));
-		this.redraw();
-	}
-
-	erasePixels(pixels) {
-		this.applyBatchToPixels(pixels, (data, idx) => data[ idx + 3 ] = 0);
-		this.log(`Erased ${pixels.length} pixels`);
-	}
-
-	recolorPixels(pixels, r, g, b, log = true) {
-		this.applyBatchToPixels(pixels, (data, idx) => {
-			data[ idx ] = r;
-			data[ idx + 1 ] = g;
-			data[ idx + 2 ] = b;
-			data[ idx + 3 ] = 255;
-		});
-		log && this.log(`Recolored ${pixels.length} pixels to rgb(${r},${g},${b})`);
-
-	}
-
-	drawBoundingBox(pixels, color = "limegreen") {
-		if (!pixels.length) return;
-		let minX = this.canvas.width, maxX = -1, minY = this.canvas.height, maxY = -1;
-
-		pixels.forEach(p => {
-			const idx = p.index / 4;
-			const x = idx % this.canvas.width;
-			const y = Math.floor(idx / this.canvas.width);
-			minX = Math.min(minX, x);
-			maxX = Math.max(maxX, x);
-			minY = Math.min(minY, y);
-			maxY = Math.max(maxY, y);
-		});
-
-		// Optional: get color of the first pixel
-		const data = this.activeLayer.imageData.data; // <-- get pixel data
-
-
-		const firstIdx = pixels[ 0 ].index;
-		const r = data[ firstIdx ];
-		const g = data[ firstIdx + 1 ];
-		const b = data[ firstIdx + 2 ];
-
-
-		this.ctx.strokeStyle = color;
-		const S = 1;
-		this.ctx.lineWidth = S;
-		this.ctx.strokeRect(minX + S, minY + S, maxX - minX - 2 * S, maxY - minY - 2 * S);
-		this.ctx.setLineDash([]);
-		this.log(`Highlighted pixels: ${pixels.length}\tcolor: rgb(${r}, ${g}, ${b})`);
-	}
 
 	// --------------------
 	// Download / Export
