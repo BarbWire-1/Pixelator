@@ -36,26 +36,43 @@ export class PaletteManager {
 	// PALETTE CREATION FROM LAYER
 	//=========================
 	createPalette() {
-		if (!this.cm.activeLayer || !this.cm.activeLayer.colorClusters) return;
+		if (!this.cm.activeLayer || !this.cm.activeLayer.imageData) return;
 
-		//console.log(this.cm.activeLayer.colorClusters)
+		const { width, height, data } = this.cm.activeLayer.imageData;
+		const pixelCount = width * height;
+
+		// We'll store 32-bit color keys for quick lookup
+		const clusterMap = new Map();
+
+		// Pre-pass over imageData
+		for (let i = 0; i < pixelCount; i++) {
+			const idx = i * 4;
+			const r = data[ idx ], g = data[ idx + 1 ], b = data[ idx + 2 ], a = data[ idx + 3 ];
+			if (r + g + b + a === 0) continue; // skip fully transparent
+
+			const colorKey = (r << 24) | (g << 16) | (b << 8) | a;
+			if (!clusterMap.has(colorKey)) {
+				clusterMap.set(colorKey, { indices: new Uint32Array(pixelCount), count: 0, r, g, b, a });
+			}
+			const cluster = clusterMap.get(colorKey);
+			cluster.indices[ cluster.count++ ] = idx;
+		}
+
+		// Clear previous palette
 		this.clearPaletteContainer();
 		this.addDeselectSwatch();
 
-		// Extract colors
-		const palette = this.cm.activeLayer.colorClusters.map(({ color }) => ({
-			r: color[ 0 ],
-			g: color[ 1 ],
-			b: color[ 2 ],
-			a: color[ 3 ]
-		}));
+		// Convert clusters to swatches
+		const clusters = Array.from(clusterMap.values());
+		const sortedColors = smoothSort(clusters.map(c => ({ r: c.r, g: c.g, b: c.b, a: c.a })));
 
-		// Sort them perceptually
-		const sorted = smoothSort(palette);
+		sortedColors.forEach(c => {
+			const cluster = clusters.find(cl => cl.r === c.r && cl.g === c.g && cl.b === c.b && cl.a === c.a);
+			if (!cluster) return;
 
-		sorted.forEach(color => {
-			this.addColorSwatch(color);
+			this.addColorSwatch(c, cluster.indices.subarray(0, cluster.count));
 		});
+
 	}
 
 
@@ -66,21 +83,23 @@ export class PaletteManager {
 		this.container.appendChild(deselectDiv);
 	}
 
-	addColorSwatch(colorData) {
+	addColorSwatch(colorData, clusterIndices = null) {
 		const { r, g, b, a } = colorData;
-		if (r + g + b + a === 0) return; // skip fully transparent black
+		if (r + g + b + a === 0) return; // skip fully transparent
 
 		const div = this.swatchTemplate.content.firstElementChild.cloneNode(true);
 		div.style.backgroundColor = `rgb(${r},${g},${b})`;
 		div.title = "Keep pressed to highlight pixels";
 		this.container.appendChild(div);
 
-		const swatch = { r, g, b, div };
-		this.swatches.push(swatch);
+		const swatch = { r, g, b, a, div };
+		if (clusterIndices) swatch.indices = clusterIndices;
 
+		this.swatches.push(swatch);
 		this.attachSwatchListeners(swatch);
 		return swatch;
 	}
+
 
 	attachSwatchListeners(swatch) {
 		swatch.div.addEventListener("mousedown", () => this.highlightSwatch(swatch));
@@ -109,7 +128,7 @@ export class PaletteManager {
 		this.selectedSwatch.div.classList.remove("selected");
 		this.selectedSwatch = null;
 		this.cm.redraw();
-		this.colorPicker.value = "#ff0000    ⎘";
+		this.colorPicker.value = "#ff0000";
 	}
 
 	selectSwatch(swatch) {
@@ -146,20 +165,13 @@ export class PaletteManager {
 	//=========================
 	// PIXEL OPERATIONS
 	//=========================
-	getPixels(swatchOrColor) {
-		if (!this.cm.activeLayer || !this.cm.activeLayer.colorClusters) return [];
+	getPixels(swatch) {
+		if (!swatch?.indices || !swatch.indices.length) return [];
 
-		if (swatchOrColor?.r != null && swatchOrColor?.g != null && swatchOrColor?.b != null) {
-			const cluster = this.cm.activeLayer.colorClusters.find(c =>
-				c.color[ 0 ] === swatchOrColor.r &&
-				c.color[ 1 ] === swatchOrColor.g &&
-				c.color[ 2 ] === swatchOrColor.b
-			);
-			if (cluster) return cluster.indices.map(i => ({ index: i }));
-		}
-
-		return [];
+		// Wrap each index for compatibility with applyPixels
+		return Array.from(swatch.indices, i => ({ index: i }));
 	}
+
 
 	applyPixels(pixels, { r = null, g = null, b = null, erase = false } = {}) {
 		if (!pixels.length || !this.cm.activeLayer) return;
@@ -229,11 +241,6 @@ export class PaletteManager {
 		const pixels = this.getPixels(sw);
 		if (!pixels.length) return;
 
-		// Update cluster in layer
-		const cluster = this.cm.activeLayer.colorClusters.find(c =>
-			c.color[ 0 ] === sw.r && c.color[ 1 ] === sw.g && c.color[ 2 ] === sw.b
-		);
-		if (cluster) cluster.color = new Uint8Array([ r, g, b, 255 ]);
 
 		// Update swatch and pixels
 		sw.r = r;
@@ -279,3 +286,4 @@ export class PaletteManager {
 		return "#" + [ r, g, b ].map(x => x.toString(16).padStart(2, "0")).join("");
 	}
 }
+///////////////

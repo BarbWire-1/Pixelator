@@ -36,7 +36,7 @@ function setColorAt(data, index, { r, g, b, a }) {
  * @returns {{ palette: number[][], clusteredData: Uint8ClampedArray, uniqueCount: number }}
  * Returns the generated palette, clustered image data, and the count of unique colors.
  */
-export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaque = false) {
+export async function kMeansQuantizeOLD(imageData, k = 16, iterations = 10, allOpaque = false) {
 
 	console.log(imageData.data.length / 4)
 	const stride = allOpaque ? 3 : 4; // allocated // number of array slots per pixel (RGB or RGBA)
@@ -62,18 +62,7 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaq
 			uniqueColors.add((r << 24) | (g << 16) | (b << 8) | a);
 		}
 
-		// using named functions for clarity and readability
-		// 		const { r, g, b, a } = getColorAt(imageData.data, i);
-		//
-		// 		// Write directly to flat pixel array, forcing alpha if needed
-		// 		setColorAt(pixels, pIndex, { r, g, b, a: allOpaque ? 255 : a });
-		// 		pIndex += stride;
-		//
-		// 		// Track unique colors
-		// 		const key = allOpaque
-		// 			? (r << 16) | (g << 8) | b// 24 bit
-		// 			: (r << 24) | (g << 16) | (b << 8) | a;// 32 bit
-		// 		uniqueColors.add(key);
+
 	}
 
 
@@ -168,7 +157,7 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaq
 
 	return { palette, clusteredData, uniqueCount: uniqueColors.size, clusters };
 }
-export async function kMeansQuantizeBloated(imageData, k = 16, iterations = 10, canvasW, canvasH, allOpaque = false) {
+export async function kMeansQuantize(imageData, k = 16, iterations = 10, canvasW, canvasH, allOpaque = false) {
 	const smallW = imageData.width;
 	const smallH = imageData.height;
 
@@ -299,4 +288,87 @@ export async function kMeansQuantizeBloated(imageData, k = 16, iterations = 10, 
 	}));
 
 	return { palette, clusteredData, uniqueCount: uniqueColors.size, colorClusters };
+}
+// BACK TO NOT MAPPING!!!!!!
+export function fastKMeansQuantize(imageData, k = 16, iterations = 5, allOpaque = false, tileStep = 1) {
+	const { data, width, height } = imageData;
+	const stride = 4;
+	const pixelCount = width * height;
+
+	// --- 1. Sample pixels for K-means ---
+	const samples = [];
+	for (let y = 0; y < height; y += tileStep) {
+		for (let x = 0; x < width; x += tileStep) {
+			const idx = (y * width + x) * stride;
+			const r = data[ idx ], g = data[ idx + 1 ], b = data[ idx + 2 ], a = data[ idx + 3 ];
+			samples.push(allOpaque ? [ r, g, b ] : [ r, g, b, a ]);
+		}
+	}
+
+	const sStride = allOpaque ? 3 : 4;
+	const actualK = Math.min(k, samples.length);
+
+	// --- 2. Initialize palette randomly ---
+	const palette = [];
+	const used = new Set();
+	while (palette.length < actualK) {
+		const idx = Math.floor(Math.random() * samples.length);
+		const key = samples[ idx ].join(',');
+		if (!used.has(key)) {
+			palette.push(samples[ idx ].slice());
+			used.add(key);
+		}
+	}
+
+	// --- 3. K-means iterations ---
+	for (let iter = 0; iter < iterations; iter++) {
+		const clusterSums = Array.from({ length: actualK }, () => new Array(sStride).fill(0));
+		const clusterCounts = new Array(actualK).fill(0);
+
+		for (const s of samples) {
+			let best = 0, bestDist = Infinity;
+			for (let i = 0; i < palette.length; i++) {
+				const c = palette[ i ];
+				let d = 0;
+				for (let j = 0; j < sStride; j++) {
+					const diff = s[ j ] - c[ j ];
+					d += diff * diff;
+				}
+				if (d < bestDist) { best = i; bestDist = d; }
+			}
+			for (let j = 0; j < sStride; j++) clusterSums[ best ][ j ] += s[ j ];
+			clusterCounts[ best ]++;
+		}
+
+		// Update centroids
+		for (let i = 0; i < actualK; i++) {
+			if (clusterCounts[ i ] === 0) continue;
+			for (let j = 0; j < sStride; j++) palette[ i ][ j ] = Math.round(clusterSums[ i ][ j ] / clusterCounts[ i ]);
+		}
+	}
+
+	// --- 4. Map all pixels in one pass ---
+	const clusteredData = new Uint8ClampedArray(data.length);
+	const view = new Uint32Array(clusteredData.buffer); // write RGBA as single 32-bit int
+	for (let i = 0; i < pixelCount; i++) {
+		const idx = i * stride;
+		const px = allOpaque ? [ data[ idx ], data[ idx + 1 ], data[ idx + 2 ] ] : [ data[ idx ], data[ idx + 1 ], data[ idx + 2 ], data[ idx + 3 ] ];
+
+		let best = 0, bestDist = Infinity;
+		for (let j = 0; j < palette.length; j++) {
+			const c = palette[ j ];
+			let d = 0;
+			for (let t = 0; t < sStride; t++) {
+				const diff = px[ t ] - c[ t ];
+				d += diff * diff;
+			}
+			if (d < bestDist) { best = j; bestDist = d; }
+		}
+
+		const c = palette[ best ];
+		const a = allOpaque ? 255 : c[ 3 ] ?? 255;
+		view[ i ] = (a << 24) | (c[ 2 ] << 16) | (c[ 1 ] << 8) | c[ 0 ];
+	}
+
+	return { palette, clusteredData };
 }
