@@ -249,10 +249,12 @@ export class DrawingTool {
 		const pixels = this.bresenham(p0.x, p0.y, p1.x, p1.y);
 
 		pixels.forEach(({ x, y }) => {
-			this.applyTile(x, y);           // normal tile
+
+			this.applyTile(x, y);
+			// normal tile
 			if (this.mode !== "N") {        // mirrored modes
 				this.applyMirrors(x, y, this.currentColor, 255);
-				
+
 			}
 		});
 
