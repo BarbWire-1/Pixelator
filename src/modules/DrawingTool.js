@@ -197,13 +197,7 @@ export class DrawingTool {
 				break;
 		}
 
-		mirrors.forEach(m => {
-			for (let y = 0; y < ts; y++) {
-				for (let x = 0; x < ts; x++) {
-					this.setPixel(m.tx * ts + x, m.ty * ts + y, color, alpha);
-				}
-			}
-		});
+		mirrors.forEach(m => this.applyTile(m.tx, m.ty, color, alpha));
 	}
 
 	floodFillTile(startTx, startTy) {
@@ -255,9 +249,12 @@ export class DrawingTool {
 		const pixels = this.bresenham(p0.x, p0.y, p1.x, p1.y);
 
 		pixels.forEach(({ x, y }) => {
-			this.applyTile(x, y);           // normal tile
+
+			this.applyTile(x, y);
+			// normal tile
 			if (this.mode !== "N") {        // mirrored modes
 				this.applyMirrors(x, y, this.currentColor, 255);
+
 			}
 		});
 
