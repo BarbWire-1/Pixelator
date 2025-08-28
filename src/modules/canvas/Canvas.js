@@ -155,32 +155,32 @@ export class CanvasManager {
 		return { targetW, targetH };
 	}
 
-	prepareCanvasForImage(img) {
-		const start = performance.now();
-		const { targetW, targetH } = this.setContainerDimensions(img);
-		this.ctx.imageSmoothingEnabled = false;
-		this.ctx.clearRect(0, 0, targetW, targetH);
-		this.log(`Step 1 (prepare canvas) done in ${(performance.now() - start).toFixed(2)} ms`);
-		return { targetW, targetH };
-	}
+	// prepareCanvasForImage(img) {
+	// 	const start = performance.now();
+	// 	const { targetW, targetH } = this.setContainerDimensions(img);
+	// 	this.ctx.imageSmoothingEnabled = false;
+	// 	this.ctx.clearRect(0, 0, targetW, targetH);
+	// 	this.log(`Step 1 (prepare canvas) done in ${(performance.now() - start).toFixed(2)} ms`);
+	// 	return { targetW, targetH };
+	// }
 
-	drawImageOnCanvas(img, width, height) {
-		const start = performance.now();
-		this._drawToCtx(this.ctx, img, width, height, false);
-		const imageData = this.ctx.getImageData(0, 0, width, height);
-		this.log(`Step 2 (draw image) done in ${(performance.now() - start).toFixed(2)} ms`);
-		return imageData;
-	}
+	// drawImageOnCanvas(img, width, height) {
+	// 	const start = performance.now();
+	// 	this._drawToCtx(this.ctx, img, width, height, false);
+	// 	const imageData = this.ctx.getImageData(0, 0, width, height);
+	// 	this.log(`Step 2 (draw image) done in ${(performance.now() - start).toFixed(2)} ms`);
+	// 	return imageData;
+	// }
 
-	createBaseLayer(width, height, imageData) {
-		const start = performance.now();
-		const layer = new Layer(width, height, "Base Layer");
-		layer.imageData = imageData;
-		this.layers = [ layer ];
-		this.activeLayer = layer;
-		this.log(`Step 3 (create base layer) done in ${(performance.now() - start).toFixed(2)} ms`);
-		return layer;
-	}
+	// createBaseLayer(width, height, imageData) {
+	// 	const start = performance.now();
+	// 	const layer = new Layer(width, height, "Base Layer");
+	// 	layer.imageData = imageData;
+	// 	this.layers = [ layer ];
+	// 	this.activeLayer = layer;
+	// 	this.log(`Step 3 (create base layer) done in ${(performance.now() - start).toFixed(2)} ms`);
+	// 	return layer;
+	// }
 
 	// --------------------
 	// Canvas drawing
@@ -235,38 +235,45 @@ export class CanvasManager {
 		const { rawImage } = this.activeLayer;
 		const layer = this.activeLayer;
 
-		// Determine temporary canvas size
-		const [ tempWidth, tempHeight ] = this.tileSize === 1
-			? [ canvasW, canvasH ]
-			: [ Math.ceil(canvasW / this.tileSize), Math.ceil(canvasH / this.tileSize) ];
+		// -----------------------------
+		// Determine downscaled size for kMeans
+		// -----------------------------
+		const downscaledWidth = this.tileSize === 1 ? canvasW : Math.ceil(canvasW / this.tileSize);
+		const downscaledHeight = this.tileSize === 1 ? canvasH : Math.ceil(canvasH / this.tileSize);
 
-		// Prepare temporary canvas for quantization
-		const tempCanvas = this.createTempCanvas(rawImage, tempWidth, tempHeight, false);
+		// -----------------------------
+		// Create temporary downscaled canvas
+		// -----------------------------
+		const tempCanvas = this.createTempCanvas(rawImage, downscaledWidth, downscaledHeight, false, "Quantize Temp Canvas");
 
-		// Run kMeans quantization
-		const { palette, clusters, clusteredData, uniqueCount } = await this.runQuantizationInWorker(tempCanvas, this.colorCount);
+		// -----------------------------
+		// Run kMeans quantization on downscaled image
+		// -----------------------------
+		const { palette, clusteredData } = await this.runQuantizationInWorker(tempCanvas, this.colorCount);
 
-		layer.colorClusters = []; // <-- ensures it's always iterable
-		layer.colorClusters = palette.map((color, i) => ({
-			color,        // Uint8Array([r,g,b,a])
-			indices: clusters[ i ] // pixel indices
-		}));
-
-		// Store results in layer
+		// -----------------------------
+		// Store palette & clustered data in layer
+		// -----------------------------
+		layer.colorClusters = palette.map(color => ({ color })); // just keep colors; indices not needed
 		Object.assign(layer, {
 			clusteredData,
-			tempWidth,
-			tempHeight,
+			tempWidth: downscaledWidth,
+			tempHeight: downscaledHeight,
 			colors: palette
 		});
 
-		// Apply clustered data (auto-upscale handled inside layer)
-		layer.applyClusteredData(clusteredData, tempWidth, tempHeight, this.tileSize);
+		// -----------------------------
+		// Apply clustered data: will automatically upscale using tileSize
+		// -----------------------------
+		layer.applyClusteredData(clusteredData, downscaledWidth, downscaledHeight, this.tileSize);
 
+		// -----------------------------
 		// Debug log
+		// -----------------------------
 		const totalPixels = canvasW * canvasH;
-		this.log(`quantizeImage: done in ${(performance.now() - t0).toFixed(2)} ms, totalPixels=${totalPixels}, uniqueColors=${uniqueCount}, palette length=${palette.length}`);
+		this.log(`quantizeImage: done in ${(performance.now() - t0).toFixed(2)} ms, totalPixels=${totalPixels}, palette length=${palette.length}`);
 	}
+
 
 
 	// --------------------
