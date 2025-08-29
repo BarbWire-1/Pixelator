@@ -65,8 +65,6 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaq
 
 	}
 
-
-
 	const actualK = Math.min(k, uniqueColors.size);
 
 	// Initialize palette randomly from used pixels
