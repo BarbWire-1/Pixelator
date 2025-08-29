@@ -227,52 +227,60 @@ export class CanvasManager {
 	// --------------------
 	// Quantize only
 	// --------------------
+	// Utility wrapper
+	async timedLog(label, fn) {
+		const t0 = performance.now();
+		const result = await fn();
+		const elapsed = (performance.now() - t0).toFixed(2);
+		this.log(`${label}: done in ${elapsed} ms`);
+		return result;
+	}
+
+	// --------------------
+	// Quantize only with step logging
+	// --------------------
 	async quantizeImage() {
 		if (!this.activeLayer || !this.dimensions) return;
 
-		const t0 = performance.now();
 		const { width: canvasW, height: canvasH } = this.dimensions;
 		const { rawImage } = this.activeLayer;
 		const layer = this.activeLayer;
 
-		// -----------------------------
 		// Determine downscaled size for kMeans
-		// -----------------------------
 		const downscaledWidth = this.tileSize === 1 ? canvasW : Math.ceil(canvasW / this.tileSize);
 		const downscaledHeight = this.tileSize === 1 ? canvasH : Math.ceil(canvasH / this.tileSize);
 
-		// -----------------------------
-		// Create temporary downscaled canvas
-		// -----------------------------
-		const tempCanvas = this.createTempCanvas(rawImage, downscaledWidth, downscaledHeight, false, "Quantize Temp Canvas");
-
-		// -----------------------------
-		// Run kMeans quantization on downscaled image
-		// -----------------------------
-		const { palette, clusteredData } = await this.runQuantizationInWorker(tempCanvas, this.colorCount);
-
-		// -----------------------------
-		// Store palette & clustered data in layer
-		// -----------------------------
-		layer.colorClusters = palette.map(color => ({ color })); // just keep colors; indices not needed
-		Object.assign(layer, {
-			clusteredData,
-			tempWidth: downscaledWidth,
-			tempHeight: downscaledHeight,
-			colors: palette
+		// Step 1: Create temporary downscaled canvas
+		const tempCanvas = await this.timedLog("Quantize Temp Canvas", async () => {
+			return this.createTempCanvas(rawImage, downscaledWidth, downscaledHeight, false);
 		});
 
-		// -----------------------------
-		// Apply clustered data: will automatically upscale using tileSize
-		// -----------------------------
-		layer.applyClusteredData(clusteredData, downscaledWidth, downscaledHeight, this.tileSize);
+		// Step 2: Run kMeans quantization
+		const { palette, clusteredData, uniqueCount } = await this.timedLog("kMeans Quantization", async () => {
+			return this.runQuantizationInWorker(tempCanvas, this.colorCount);
+		});
 
-		// -----------------------------
-		// Debug log
-		// -----------------------------
+		// Step 3: Store palette & clustered data
+		await this.timedLog("Store clustered data", async () => {
+			layer.colorClusters = palette.map(color => ({ color }));
+			Object.assign(layer, {
+				clusteredData,
+				tempWidth: downscaledWidth,
+				tempHeight: downscaledHeight,
+				colors: palette
+			});
+		});
+
+		// Step 4: Apply clustered data (upscale if needed)
+		await this.timedLog("Apply clustered data", async () => {
+			layer.applyClusteredData(clusteredData, downscaledWidth, downscaledHeight, this.tileSize);
+		});
+
+		// Step 5: Final log
 		const totalPixels = canvasW * canvasH;
-		this.log(`quantizeImage: done in ${(performance.now() - t0).toFixed(2)} ms, totalPixels=${totalPixels}, palette length=${palette.length}`);
+		this.log(`quantizeImage: done, totalPixels: ${totalPixels}, uniqueColors: ${uniqueCount}, new palette length: ${palette.length}`);
 	}
+
 
 
 
@@ -283,7 +291,6 @@ export class CanvasManager {
 		const layer = this.activeLayer;
 		if (!layer || !layer.clusteredData) return;
 
-		layer.applyClusteredData(layer.clusteredData, layer.tempWidth, layer.tempHeight, this.tileSize);
 		this.redraw();
 		this.log(`applyTileSize: done, tileSize=${this.tileSize}`);
 	}
