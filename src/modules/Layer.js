@@ -4,17 +4,17 @@ export class Layer {
 		this.height = height;
 		this.name = name;
 
-		// Layer properties
 		this.visible = true;
 		this.opacity = 1.0;
-		this.colors = [];       // [{ r,g,b,pixels,erased }]
+		this.colors = [];
 		this.effects = [];
 		this.history = [];
 
-		this.rawImage = rawImage; // Layer owns its raw image
+		this.rawImage = rawImage;
 
-		// Initialize canvas
+		// Initialize canvas and tempCanvas cache
 		this.initCanvas();
+		this.initTempCanvas();
 		this.initImageData();
 	}
 
@@ -22,8 +22,12 @@ export class Layer {
 		this.canvas = document.createElement("canvas");
 		this.canvas.width = this.width;
 		this.canvas.height = this.height;
-		// optimize for frequent pixel reads
 		this.ctx = this.canvas.getContext("2d", { willReadFrequently: true });
+	}
+
+	initTempCanvas() {
+		this._tempCanvas = document.createElement("canvas");
+		this._tempCtx = this._tempCanvas.getContext("2d");
 	}
 
 	initImageData() {
@@ -54,18 +58,23 @@ export class Layer {
 		ctx.globalAlpha = 1.0;
 	}
 
-	applyClusteredData(clusteredData, tempWidth, tempHeight, tileSize = 1) {
+	applyClusteredData(clusteredData, tempWidth, tempHeight, tileSize = 1, updateHistory = true) {
 		const w = this.width;
 		const h = this.height;
 
 		if (tileSize === 1) {
 			this.imageData.data.set(clusteredData);
+			if (updateHistory) this.pushHistory("quantize");
 			this.redraw();
 		} else {
-			const tempCanvas = document.createElement("canvas");
+			// Reuse cached temp canvas
+			const tempCanvas = this._tempCanvas;
+			const tctx = this._tempCtx;
+
 			tempCanvas.width = tempWidth;
 			tempCanvas.height = tempHeight;
-			tempCanvas.getContext("2d").putImageData(new ImageData(clusteredData, tempWidth, tempHeight), 0, 0);
+
+			tctx.putImageData(new ImageData(clusteredData, tempWidth, tempHeight), 0, 0);
 
 			const ctx = this.ctx;
 			ctx.imageSmoothingEnabled = false;
@@ -75,7 +84,15 @@ export class Layer {
 				0, 0, tempWidth, tempHeight,
 				0, 0, tempWidth * tileSize, tempHeight * tileSize
 			);
-			this.imageData.data.set(ctx.getImageData(0, 0, w, h).data);
+
+			// Only read back if history requires it
+			if (updateHistory) {
+				this.imageData.data.set(ctx.getImageData(0, 0, w, h).data);
+				this.pushHistory("quantize");
+			} else {
+				// Optionally skip readback for max speed
+				this.redraw();
+			}
 		}
 	}
 }
