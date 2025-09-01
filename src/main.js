@@ -20,3 +20,4 @@ export { snapshot };
 
 // TODO implement Layer stack and logic, best in own Handler - use template for components
 // TODO REFACTOR CANVAS!!! : imageProcessing, canvasHandling, layer-management
+	// TODO use ImageProcessor and InintModule
