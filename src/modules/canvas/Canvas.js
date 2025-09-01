@@ -144,7 +144,7 @@ export class CanvasManager {
 
 		this.activeLayer = this.layers[ 1 ]; // Base Layer active
 		//TODO for testing only - implement ranges and checkboxes for visibility per layer
-		this.activeLayer.opacity = 0;
+		this.layers[ 0 ].opacity = 0;
 
 		this.redraw();
 
