@@ -5,7 +5,7 @@ export class Layer {
 		this.name = name;
 
 		this.visible = true;
-		this.opacity = 1.0;
+		this.opacity = 1;
 		this.colors = [];
 		this.effects = [];
 		this.history = [];
@@ -55,44 +55,59 @@ export class Layer {
 		if (!this.visible) return;
 		ctx.globalAlpha = this.opacity;
 		ctx.drawImage(this.canvas, x, y);
-		ctx.globalAlpha = 1.0;
+		ctx.globalAlpha = 1;// reset
 	}
 
-	applyClusteredData(clusteredData, tempWidth, tempHeight, tileSize = 1, updateHistory = true) {
+
+	applyClusteredData(clusteredData, tempWidth, tempHeight, highlight = -1) {
 		const w = this.width;
 		const h = this.height;
+		const scaleX = w / tempWidth;
+		const scaleY = h / tempHeight;
+		const alpha = Math.round(this.opacity * 255); // layer opacity baked in
 
-		if (tileSize === 1) {
-			this.imageData.data.set(clusteredData);
-			if (updateHistory) this.pushHistory("quantize");
-			this.redraw();
-		} else {
-			// Reuse cached temp canvas
-			const tempCanvas = this._tempCanvas;
-			const tctx = this._tempCtx;
+		const output = new Uint8ClampedArray(w * h * 4);
 
-			tempCanvas.width = tempWidth;
-			tempCanvas.height = tempHeight;
+		const getColor = (idx) => {
+			const base = idx * 4;
+			return {
+				r: clusteredData[ base ],
+				g: clusteredData[ base + 1 ],
+				b: clusteredData[ base + 2 ],
+				a: alpha // use layer opacity
+			};
+		};
 
-			tctx.putImageData(new ImageData(clusteredData, tempWidth, tempHeight), 0, 0);
-
-			const ctx = this.ctx;
-			ctx.imageSmoothingEnabled = false;
-			ctx.clearRect(0, 0, w, h);
-			ctx.drawImage(
-				tempCanvas,
-				0, 0, tempWidth, tempHeight,
-				0, 0, tempWidth * tileSize, tempHeight * tileSize
-			);
-
-			// Only read back if history requires it
-			if (updateHistory) {
-				this.imageData.data.set(ctx.getImageData(0, 0, w, h).data);
-				this.pushHistory("quantize");
-			} else {
-				// Optionally skip readback for max speed
-				this.redraw();
+		const fillRect = (xStart, yStart, wRect, hRect, { r, g, b, a }) => {
+			const rowStride = w * 4;
+			for (let y = yStart; y < yStart + hRect; y++) {
+				let offset = y * rowStride + xStart * 4;
+				for (let x = 0; x < wRect; x++, offset += 4) {
+					output[ offset ] = r;
+					output[ offset + 1 ] = g;
+					output[ offset + 2 ] = b;
+					output[ offset + 3 ] = a;
+				}
 			}
+		};
+
+		for (let i = 0; i < tempWidth * tempHeight; i++) {
+			const xS = i % tempWidth;
+			const yS = Math.floor(i / tempWidth);
+			const color = getColor(i);
+
+			const xStart = Math.floor(xS * scaleX);
+			const yStart = Math.floor(yS * scaleY);
+			const wRect = Math.ceil(scaleX);
+			const hRect = Math.ceil(scaleY);
+
+			fillRect(xStart, yStart, wRect, hRect, color);
 		}
+
+		this.imageData.data.set(output);
+		this.pushHistory("quantize");
+		this.redraw(); // redraw into this.canvas
 	}
+
+
 }
