@@ -216,31 +216,36 @@ export class CanvasManager {
 	}
 
 	drawGrid() {
+		if (!this.activeLayer) return;
 		const ctx = this.ctx;
 		const w = this.canvas.width;
 		const h = this.canvas.height;
-		const ts = this.tileSize;
+
+		// Determine number of columns/rows
+		const tempW = this.activeLayer.tempWidth || Math.floor(w / this.tileSize) || 1;
+		const tempH = this.activeLayer.tempHeight || Math.floor(h / this.tileSize) || 1;
 
 		ctx.strokeStyle = "#4b4b4b";
 		ctx.lineWidth = 1;
 
-		// vertical lines
-		for (let x = 0; x <= w; x += ts) {
+		// Draw vertical lines
+		for (let i = 0; i <= tempW; i++) {
+			const x = Math.round((i * w) / tempW);
 			ctx.beginPath();
 			ctx.moveTo(x, 0);
 			ctx.lineTo(x, h);
 			ctx.stroke();
 		}
 
-		// horizontal lines
-		for (let y = 0; y <= h; y += ts) {
+		// Draw horizontal lines
+		for (let i = 0; i <= tempH; i++) {
+			const y = Math.round((i * h) / tempH);
 			ctx.beginPath();
 			ctx.moveTo(0, y);
 			ctx.lineTo(w, y);
 			ctx.stroke();
 		}
 	}
-
 
 	// --------------------
 	// Quantize only

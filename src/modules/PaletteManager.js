@@ -31,7 +31,7 @@ export class PaletteManager {
 			});
 		});
 	}
-
+// TODO - check to receive the clusters from kMeans and store on layer
 	//=========================
 	// PALETTE CREATION FROM LAYER
 	//=========================
