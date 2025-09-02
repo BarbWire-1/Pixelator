@@ -12,49 +12,7 @@ import { snapshot } from "../../main.js";
 
 import { Layer } from "../Layer.js";
 
-function renderLayerPanel(cm) {
-	const panel = document.getElementById("layer-panel");
-	//panel.innerHTML = "";
 
-	cm.layers.forEach((layer, idx) => {
-		// const div = document.createElement("div");
-		// div.className = "layer-entry";
-
-
-		// Visibility toggle
-		// const checkbox = document.createElement("input");
-		// checkbox.type = "checkbox";
-		//checkbox.checked = layer.visible ?? true; // default visible
-		checkbox.addEventListener("change", () => {
-			layer.visible = checkbox.checked;
-			cm.redraw();
-		});
-
-		// Opacity slider
-		// const slider = document.createElement("input");
-		// slider.type = "range";
-		// slider.min = 0;
-		// slider.max = 1;
-		// slider.step = 0.05;
-		// slider.value = layer.opacity ?? 1;
-		slider.addEventListener("input", () => {
-			layer.opacity = parseFloat(slider.value);
-			cm.redraw();
-		});
-
-		// Label (click to set active layer)
-		// const label = document.createElement("span");
-		// label.textContent = layer.name;
-		// label.style.cursor = "pointer";
-		// label.addEventListener("click", () => {
-		// 	cm.activeLayer = layer;
-		// 	renderLayerPanel(cm); // re-render to update highlight
-		// });
-
-		// div.append(checkbox, label, slider);
-		// panel.append(div);
-	});
-}
 
 
 
@@ -70,8 +28,10 @@ export class CanvasManager {
 		this.tempCanvas = document.createElement("canvas");
 		this.tempCtx = this.tempCanvas.getContext("2d", { willReadFrequently: true });
 
-		this.layers = [];
-		this.activeLayer = null;
+
+		this.activeLayer = new Layer(this.canvas.width, this.canvas.height, "Drawing", null)
+		this.layers = [this.activeLayer];
+
 		this.toggleGrid = false;
 		this.tileSize = 1;
 		this.rawImage = null;
@@ -204,7 +164,7 @@ export class CanvasManager {
 		this.activeLayer = base;
 
 		this.redraw();
-		
+
 
 		this.log(`Image loaded: ${img.width}x${img.height}`);
 		return base;
@@ -297,7 +257,7 @@ export class CanvasManager {
 	async quantizeImage() {
 		if (!this.activeLayer || !this.dimensions) return;
 
-		this.activeLayer.opacity = 1;
+		//this.activeLayer.opacity = 1;
 		const { width: canvasW, height: canvasH } = this.dimensions;
 		const layer = this.activeLayer;
 

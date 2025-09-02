@@ -571,12 +571,10 @@ input[type="number"]::-webkit-outer-spin-button {
      align-items: center;
      gap: 6px;
      padding: 4px;
-     border: 1px solid #ccc;
+     /* border: 1px solid #ccc; */
      border-radius: 6px;
      margin-bottom: 4px;
 }
-
-.layer-entry.active-layer {
-     border: 2px solid #4cafef;
-     background: #e6f7ff;
+canvas {
+     max-width: 70%
 }

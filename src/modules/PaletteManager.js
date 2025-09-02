@@ -48,7 +48,7 @@ export class PaletteManager {
 			if (r + g + b + a === 0) continue;
 
 			const key = (r << 24) | (g << 16) | (b << 8) | a;
-			if (!clusterMap.has(key)) clusterMap.set(key, { r, g, b, a, indices: [] });
+			if (!clusterMap.has(key)) clusterMap.set(key, { r, g, b/*, a*/, indices: [] });
 			clusterMap.get(key).indices.push(idx);
 		}
 
@@ -56,10 +56,10 @@ export class PaletteManager {
 		this.addDeselectSwatch();
 
 		const clusters = Array.from(clusterMap.values());
-		const sorted = smoothSort(clusters.map(c => ({ r: c.r, g: c.g, b: c.b, a: c.a })));
+		const sorted = smoothSort(clusters.map(c => ({ r: c.r, g: c.g, b: c.b/*, a: c.a */})));
 
 		sorted.forEach(c => {
-			const cluster = clusters.find(cl => cl.r === c.r && cl.g === c.g && cl.b === c.b && cl.a === c.a);
+			const cluster = clusters.find(cl => cl.r === c.r && cl.g === c.g && cl.b === c.b /*&& cl.a === c.a*/);
 			if (!cluster) return;
 			this.addColorSwatch(c, cluster.indices);
 		});

@@ -32,7 +32,7 @@ export function initPixelator() {
 		zoomInput: document.getElementById("zoom"),
 		undoBtn: document.getElementById("undoBtn"),
 		redoBtn: document.getElementById("redoBtn"),
-		//alphaCheck: document.getElementById('alpha')
+		alphaCheck: document.getElementById('alpha')
 	};
 	const logPanel = document.getElementById("log-panel");
 
@@ -55,7 +55,7 @@ export function initPixelator() {
 	);
 
 
-// elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.checked)
+elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e.target.checked)
 	document.getElementById("downloadBtn")
 		.addEventListener('click', () => {
 			console.log("clicked dl")
@@ -222,7 +222,7 @@ export function initPixelator() {
 			const scale = parseFloat(elements.zoomInput.value);
 
 			// Change transform origin depending on scale
-			canvas.style.transformOrigin = scale > 1 ? "top left" : "center center";
+			canvas.style.transformOrigin = scale > 1.8 ? "top left" : "center center";
 			canvas.style.transform = `scale(${scale})`;
 
 			// Save scroll relative to canvas top-left

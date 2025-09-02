@@ -13,6 +13,7 @@ export class Layer {
 		this.history = [];
 
 		this.rawImage = rawImage;
+		this.allOpaque = false;
 
 		// Initialize canvas and tempCanvas cache
 		this.initCanvas();
@@ -56,18 +57,22 @@ export class Layer {
 		const h = this.height;
 		const scaleX = w / tempWidth;
 		const scaleY = h / tempHeight;
-		const alpha = Math.round(this.opacity * 255); // layer opacity baked in
+		const alpha = Math.round(this.opacity * 255);
 
-		const output = new Uint8ClampedArray(w * h * 4);
+		// Start with current image data so we don't overwrite with black
+		const output = new Uint8ClampedArray(this.imageData.data);
 
 		const getColor = (idx) => {
 			const base = idx * 4;
-			return {
-				r: clusteredData[ base ],
-				g: clusteredData[ base + 1 ],
-				b: clusteredData[ base + 2 ],
-				a: alpha // use layer opacity
-			};
+			const r = clusteredData[ base ];
+			const g = clusteredData[ base + 1 ];
+			const b = clusteredData[ base + 2 ];
+			const a = clusteredData[ base + 3 ];
+
+			// skip invalid/empty pixels
+			if (r === 0 && g === 0 && b === 0 && a === 0) return null;
+
+			return { r, g, b, a: this.allOpaque ? 255 : a };
 		};
 
 		const fillRect = (xStart, yStart, wRect, hRect, { r, g, b, a }) => {
@@ -84,23 +89,31 @@ export class Layer {
 		};
 
 		for (let i = 0; i < tempWidth * tempHeight; i++) {
+			const color = getColor(i);
+			if (!color) continue;
+
 			const xS = i % tempWidth;
 			const yS = Math.floor(i / tempWidth);
-			const color = getColor(i);
 
 			const xStart = Math.floor(xS * scaleX);
 			const yStart = Math.floor(yS * scaleY);
 			const wRect = Math.ceil(scaleX);
 			const hRect = Math.ceil(scaleY);
 
-			fillRect(xStart, yStart, wRect, hRect, color);
+			const rowStride = w * 4;
+			for (let y = yStart; y < yStart + hRect; y++) {
+				let offset = y * rowStride + xStart * 4;
+				for (let x = 0; x < wRect; x++, offset += 4) {
+					this.imageData.data[ offset ] = color.r;
+					this.imageData.data[ offset + 1 ] = color.g;
+					this.imageData.data[ offset + 2 ] = color.b;
+					this.imageData.data[ offset + 3 ] = color.a;
+				}
+			}
 		}
-
-		this.imageData.data.set(output);
-	
-
-		this.redraw(); // redraw into this.canvas
+		this.redraw();
 	}
+
 
 	getState() {
 		return {
