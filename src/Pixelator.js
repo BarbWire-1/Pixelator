@@ -61,8 +61,8 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e
 			console.log("clicked dl")
 			// later, when user clicks download
 			downloadModal.open(
-				cm.rawImage?.width || cm.activeLayer.width,
-				cm.rawImage?.height || cm.activeLayer.height,
+				cm.activeLayer.rawImage?.width || cm.activeLayer.width,
+				cm.activeLayer.rawImage?.height || cm.activeLayer.height,
 				(targetW, targetH) => cm.downloadImage(targetW, targetH)
 			);
 

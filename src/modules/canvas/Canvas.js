@@ -11,6 +11,7 @@ import { snapshot } from "../../main.js";
 
 
 import { Layer } from "../Layer.js";
+import { upscaleClusteredData } from "./ClusteredDataUtils.js";
 
 
 
@@ -22,6 +23,8 @@ import { Layer } from "../Layer.js";
 export class CanvasManager {
 	constructor (canvas) {
 		this.canvas = canvas;
+		this.canvas.width = 400;
+		this.canvas.height = 400;
 		this.ctx = canvas.getContext("2d", { willReadFrequently: true });
 
 		// Reusable tempCanvas
@@ -29,8 +32,10 @@ export class CanvasManager {
 		this.tempCtx = this.tempCanvas.getContext("2d", { willReadFrequently: true });
 
 
-		this.activeLayer = new Layer(this.canvas.width, this.canvas.height, "Drawing", null)
-		this.layers = [this.activeLayer];
+		this.drawingLayer = new Layer(this.canvas.width, this.canvas.height, "Drawing", null)
+		this.layers = [ this.drawingLayer ];
+
+		this.activeLayer = this.drawingLayer;
 
 		this.toggleGrid = false;
 		this.tileSize = 1;
@@ -132,7 +137,27 @@ export class CanvasManager {
 	// --------------------
 	async loadImage(img) {
 		const { targetW, targetH } = this.setContainerDimensions(img);
+// 		// ✅ stretch the Drawing layer to match the new dimensions
+// 		if (this.drawingLayer) {
+// 			// capture existing sketch
+// 			const oldCanvas = this.drawingLayer.canvas;
+// 			const oldImg = new Image();
+// 			oldImg.src = oldCanvas.toDataURL();
+//
+// 			// resize drawingLayer canvas
+// 			this.drawingLayer.canvas.width = targetW;
+// 			this.drawingLayer.canvas.height = targetH;
+// 			this.drawingLayer.width = targetW;
+// 			this.drawingLayer.height = targetH;
+//
+// 			// redraw old sketch stretched into new size
+// 			oldImg.onload = () => {
+// 				this.drawingLayer.ctx.drawImage(oldImg, 0, 0, targetW, targetH);
+// 				this.redraw();
+// 			};
+// 		}
 
+		this.layers = []
 		// Draw scaled image
 		this._drawToCtx(this.ctx, img, targetW, targetH, false);
 		const imageData = this.ctx.getImageData(0, 0, targetW, targetH);
@@ -160,7 +185,7 @@ export class CanvasManager {
 		base.rawImage = img;
 
 		// Assign layers
-		this.layers = [ original, base ];
+		[ original, base ].forEach(l => this.layers.push(l));
 		this.activeLayer = base;
 
 		this.redraw();
@@ -175,16 +200,29 @@ export class CanvasManager {
 	setContainerDimensions(img) {
 		const container = document.getElementById("canvas-container");
 		const margin = 100;
-		const ratio = Math.min(container.clientWidth / img.width, container.clientHeight / img.height);
+		const maxSize = 500 - margin;
 
-		const targetW = Math.round(img.width * ratio) - margin;
-		const targetH = Math.round(img.height * ratio) - margin;
+		// aspect ratio
+		const ratio = img.width / img.height;
+
+		let targetW, targetH;
+
+		if (ratio > 1) {
+			// wider than tall → width = max, scale height
+			targetW = maxSize;
+			targetH = Math.round(maxSize / ratio);
+		} else {
+			// taller than wide → height = max, scale width
+			targetH = maxSize;
+			targetW = Math.round(maxSize * ratio);
+		}
 
 		this.dimensions = { width: targetW, height: targetH, ratio };
 		this.resizeCanvas(targetW, targetH);
 
 		return { targetW, targetH };
 	}
+
 
 
 	// --------------------
@@ -337,18 +375,36 @@ export class CanvasManager {
 		tempCanvas.height = targetHeight;
 		const tctx = tempCanvas.getContext("2d");
 
-		if (targetWidth === this.activeLayer.width && targetHeight === this.activeLayer.height) {
-			tctx.putImageData(this.activeLayer.imageData, 0, 0);
+		const layer = this.activeLayer;
+
+		if (layer.clusteredData && layer.tempWidth && layer.tempHeight) {
+			// ---- Export crisp pixelated result ----
+
+			const imgData = upscaleClusteredData(
+				layer.clusteredData,
+				layer.tempWidth,
+				layer.tempHeight,
+				targetWidth,
+				targetHeight
+			);
+			tctx.putImageData(imgData, 0, 0);
+
 		} else {
-			tctx.drawImage(this.activeLayer.canvas, 0, 0, targetWidth, targetHeight);
+			// ---- Fallback: export the canvas content ----
+			if (targetWidth === layer.width && targetHeight === layer.height) {
+				tctx.putImageData(layer.imageData, 0, 0);
+			} else {
+				tctx.drawImage(layer.canvas, 0, 0, targetWidth, targetHeight);
+			}
 		}
 
+		// save as PNG
 		tempCanvas.toBlob(blob => {
 			if (!blob) return;
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;
-			a.download = 'pixelatorrr.png';
+			a.download = "pixelatorrr.png";
 			document.body.appendChild(a);
 			a.click();
 			a.remove();
@@ -357,8 +413,8 @@ export class CanvasManager {
 		}, "image/png");
 	}
 
-
 }
+
 
 // =====================
 // HISTORY SUPPORT

@@ -26,6 +26,7 @@ export class Layer {
 		this.canvas.width = this.width;
 		this.canvas.height = this.height;
 		this.ctx = this.canvas.getContext("2d", { willReadFrequently: true });
+		this.ctx.imageSmoothingEnabled = false;
 	}
 
 	initTempCanvas() {

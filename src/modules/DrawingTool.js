@@ -245,13 +245,23 @@ export class DrawingTool {
 
 			this.applyTile(tx, ty, this.currentColor, 255);
 
-			stack.push({ x: tx + 1, y: ty });
-			stack.push({ x: tx - 1, y: ty });
-			stack.push({ x: tx, y: ty + 1 });
-			stack.push({ x: tx, y: ty - 1 });
+			// Push neighbors AFTER current tile is applied
+			const neighbors = [
+				{ x: tx + 1, y: ty },
+				{ x: tx - 1, y: ty },
+				{ x: tx, y: ty + 1 },
+				{ x: tx, y: ty - 1 }
+			];
+
+			for (const n of neighbors) {
+				const nKey = `${n.x},${n.y}`;
+				if (!visited.has(nKey)) {
+					stack.push(n);
+				}
+			}
 		}
 
-		this.cm.activeLayer.redraw();
+		layer.redraw();
 		this.cm.redraw();
 		snapshot("Flood Fill");
 	}
