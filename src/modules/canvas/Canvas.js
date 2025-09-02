@@ -235,9 +235,7 @@ export class CanvasManager {
 		}
 	}
 
-	// --------------------
-	// Quantize only
-	// --------------------
+
 	// Utility wrapper
 	async timedLog(label, fn) {
 		const t0 = performance.now();
@@ -248,30 +246,29 @@ export class CanvasManager {
 	}
 
 	// --------------------
-	// Quantize only with step logging
+	// Quantize only
 	// --------------------
 	async quantizeImage() {
 		if (!this.activeLayer || !this.dimensions) return;
 
-		const { width: canvasW, height: canvasH } = this.dimensions;
-		const { rawImage } = this.activeLayer;
 		const layer = this.activeLayer;
+		const { width: canvasW, height: canvasH } = this.dimensions;
 
-		// Determine downscaled size for kMeans
+		// Only work on the pixelation layer
 		const downscaledWidth = this.tileSize === 1 ? canvasW : Math.ceil(canvasW / this.tileSize);
 		const downscaledHeight = this.tileSize === 1 ? canvasH : Math.ceil(canvasH / this.tileSize);
 
-		// Step 1: Create temporary downscaled canvas
+		// Step 1: Create temporary canvas for quantization
 		const tempCanvas = await this.timedLog("Quantize Temp Canvas", async () => {
-			return this.createTempCanvas(rawImage, downscaledWidth, downscaledHeight, false);
+			return this.createTempCanvas(layer.rawImage || layer.canvas, downscaledWidth, downscaledHeight, false);
 		});
 
-		// Step 2: Run kMeans quantization
+		// Step 2: Run kMeans quantization in worker
 		const { palette, clusteredData, uniqueCount } = await this.timedLog("kMeans Quantization", async () => {
 			return this.runQuantizationInWorker(tempCanvas, this.colorCount);
 		});
 
-		// Step 3: Store palette & clustered data
+		// Step 3: Store palette & clustered data on the layer
 		await this.timedLog("Store clustered data", async () => {
 			layer.colorClusters = palette.map(color => ({ color }));
 			Object.assign(layer, {
@@ -287,13 +284,10 @@ export class CanvasManager {
 			layer.applyClusteredData(clusteredData, downscaledWidth, downscaledHeight, this.tileSize);
 		});
 
-		// Step 5: Final log
+		// Step 5: Log summary
 		const totalPixels = canvasW * canvasH;
 		this.log(`quantizeImage: done, totalPixels: ${totalPixels}, uniqueColors: ${uniqueCount}, new palette length: ${palette.length}`);
 	}
-
-
-
 
 	// --------------------
 	// Apply tiling only (uses previously clustered data)
@@ -301,6 +295,9 @@ export class CanvasManager {
 	applyTileSize() {
 		const layer = this.activeLayer;
 		if (!layer || !layer.clusteredData) return;
+
+		// No need to re-quantize here, just update tiling
+		layer.applyClusteredData(layer.clusteredData, layer.tempWidth, layer.tempHeight, this.tileSize);
 
 		this.redraw();
 		this.log(`applyTileSize: done, tileSize=${this.tileSize}`);
@@ -325,16 +322,15 @@ export class CanvasManager {
 	downloadImage(targetWidth, targetHeight) {
 		if (!this.activeLayer) return;
 
-		const { tempCanvas, tctx } = this.createDimensionCanvas(targetWidth, targetHeight);
+		const tempCanvas = document.createElement("canvas");
+		tempCanvas.width = targetWidth;
+		tempCanvas.height = targetHeight;
+		const tctx = tempCanvas.getContext("2d");
 
 		if (targetWidth === this.activeLayer.width && targetHeight === this.activeLayer.height) {
 			tctx.putImageData(this.activeLayer.imageData, 0, 0);
 		} else {
-			const origCanvas = document.createElement("canvas");
-			origCanvas.width = this.activeLayer.width;
-			origCanvas.height = this.activeLayer.height;
-			origCanvas.getContext("2d").putImageData(this.activeLayer.imageData, 0, 0);
-			tctx.drawImage(origCanvas, 0, 0, targetWidth, targetHeight);
+			tctx.drawImage(this.activeLayer.canvas, 0, 0, targetWidth, targetHeight);
 		}
 
 		tempCanvas.toBlob(blob => {
@@ -350,6 +346,8 @@ export class CanvasManager {
 			this.log("IMAGE DOWNLOADED");
 		}, "image/png");
 	}
+
+
 }
 
 // =====================

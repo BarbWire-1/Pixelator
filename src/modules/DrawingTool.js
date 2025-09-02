@@ -4,11 +4,6 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
 import { snapshot } from '../main.js';
 
-// !!! CAREFUL: THIS FUNCTION USES TILE INDICES, NOT PIXEL COORDINATES
-// Mixing these up will silently break drawing & fill.
-// Spent HOURS in the rabbit hole on this one!
-
-// TODO - currently decided AGAINST writing changes to cluster, so drawing is lost on re-quantize. Later maybe use layers to preserve drawing as separate layer(s).
 export class DrawingTool {
 	constructor (cm, colorPicker, modeSelect, displayEl) {
 		this.cm = cm;
@@ -18,8 +13,6 @@ export class DrawingTool {
 		this.modeSelect = modeSelect;
 		this.displayEl = displayEl;
 		this.tileSize = cm.tileSize;
-
-
 
 		this.drawing = false;
 		this.start = null;
@@ -35,18 +28,15 @@ export class DrawingTool {
 	// Mouse / Input Handling
 	// ----------------------------
 	bindEvents() {
-		// Canvas events
 		const canvasEvents = {
 			mousedown: e => this.startDraw(e),
 			mousemove: e => this.drawMove(e),
 			mouseup: e => this.endDraw(e),
 			mouseleave: e => this.endDraw(e),
 		};
-
 		for (const [ event, handler ] of Object.entries(canvasEvents)) {
 			this.canvas.addEventListener(event, handler);
 		}
-
 		if (this.modeSelect) {
 			this.modeSelect.addEventListener("change", () => {
 				this.mode = this.modeSelect.value;
@@ -55,25 +45,59 @@ export class DrawingTool {
 		}
 	}
 
+	// ----------------------------
+	// Tile Helpers
+	// ----------------------------
+	getTileMetrics() {
+		const layer = this.cm.activeLayer;
+		const canvas = this.canvas;
+		if (!layer) return { tileW: [ this.cm.tileSize ], tileH: [ this.cm.tileSize ], cols: 1, rows: 1 };
+
+		const cols = layer.tempWidth || Math.floor(canvas.width / this.cm.tileSize) || 1;
+		const rows = layer.tempHeight || Math.floor(canvas.height / this.cm.tileSize) || 1;
+
+		const tileW = Array.from({ length: cols }, (_, i) =>
+			Math.round(((i + 1) * canvas.width) / cols) - Math.round((i * canvas.width) / cols)
+		);
+		const tileH = Array.from({ length: rows }, (_, i) =>
+			Math.round(((i + 1) * canvas.height) / rows) - Math.round((i * canvas.height) / rows)
+		);
+
+		return { tileW, tileH, cols, rows };
+	}
+
 	getMouseTile(e) {
 		const rect = this.canvas.getBoundingClientRect();
-		const scaleX = this.canvas.width / rect.width;
-		const scaleY = this.canvas.height / rect.height;
-		const ts = this.tileSize;
+		const { tileW, tileH, cols, rows } = this.getTileMetrics();
 
-		const x = Math.floor((e.clientX - rect.left) * scaleX / ts);
-		const y = Math.floor((e.clientY - rect.top) * scaleY / ts);
+		const mx = e.clientX - rect.left;
+		const my = e.clientY - rect.top;
 
-		return { x, y };
-	}
-	getActiveTool() {
-		const selected = document.querySelector('input[name="toolMode"]:checked');
-		return selected ? selected.value : null;
+		const cx = (mx / rect.width) * this.canvas.width;
+		const cy = (my / rect.height) * this.canvas.height;
+
+		let tx = 0, sumX = 0;
+		for (; tx < cols; tx++) {
+			sumX += tileW[ tx ];
+			if (cx < sumX) break;
+		}
+		let ty = 0, sumY = 0;
+		for (; ty < rows; ty++) {
+			sumY += tileH[ ty ];
+			if (cy < sumY) break;
+		}
+
+		return { x: tx, y: ty };
 	}
 
 	// ----------------------------
 	// Drawing / Mouse Actions
 	// ----------------------------
+	getActiveTool() {
+		const selected = document.querySelector('input[name="toolMode"]:checked');
+		return selected ? selected.value : null;
+	}
+
 	startDraw(e) {
 		const tool = this.getActiveTool();
 		if (!tool) return;
@@ -81,11 +105,9 @@ export class DrawingTool {
 		const { x, y } = this.getMouseTile(e);
 		this.updateCurrentColor();
 
-		// in startDraw
 		if (tool === "fillRegion") {
 			this.drawing = false;
 			this.floodFillTile(x, y);
-
 			return;
 		}
 
@@ -101,12 +123,11 @@ export class DrawingTool {
 		this.start = pos;
 	}
 
-	endDraw(e) {
+	endDraw() {
 		if (!this.drawing) return;
 		this.drawing = false;
 		this.start = null;
 		snapshot("Draw");
-
 	}
 
 	// ----------------------------
@@ -119,50 +140,53 @@ export class DrawingTool {
 			g: parseInt(hex.substr(3, 2), 16),
 			b: parseInt(hex.substr(5, 2), 16),
 		};
-		//snapshot("Color Changed");
 	}
 
 	// ----------------------------
-	// Pixel Operations
+	// Pixel / Tile Operations
 	// ----------------------------
 	getPixelColor(x, y) {
-		const { width, imageData } = this.cm.activeLayer;
-		const idx = (y * width + x) * 4;
-		const d = imageData.data;
-		return {
-			r: d[ idx ],
-			g: d[ idx + 1 ],
-			b: d[ idx + 2 ],
-			a: d[ idx + 3 ]
-		};
-	}
+		const layer = this.cm.activeLayer;
+		if (!layer) return { r: 0, g: 0, b: 0, a: 0 };
 
-	setPixel(x, y, color, alpha = 255) {
-		const { width, imageData } = this.cm.activeLayer;
-		const d = imageData.data;
-		const { r, g, b, a } = color;
-		const idx = (y * width + x) * 4;
-		d[ idx ] = r;
-		d[ idx + 1 ] = g;
-		d[ idx + 2 ] = b;
-		d[ idx + 3 ] =a;
-	}
+		const px = Math.min(Math.max(Math.floor(x), 0), layer.width - 1);
+		const py = Math.min(Math.max(Math.floor(y), 0), layer.height - 1);
+		const idx = (py * layer.width + px) * 4;
+		const d = layer.imageData.data;
 
-	// applyTile works for brush and eraser
+		return { r: d[ idx ], g: d[ idx + 1 ], b: d[ idx + 2 ], a: d[ idx + 3 ] };
+	}
+	colorsMatch(c1, c2, tolerance = 0) {
+	if (!c1 || !c2) return false;
+	return (
+		Math.abs(c1.r - c2.r) <= tolerance &&
+		Math.abs(c1.g - c2.g) <= tolerance &&
+		Math.abs(c1.b - c2.b) <= tolerance &&
+		Math.abs((c1.a ?? 255) - (c2.a ?? 255)) <= tolerance
+	);
+}
+
+
 	applyTile(tx, ty, color = this.currentColor, alpha = 255) {
-		const ts = this.tileSize;
-		const { width, height, imageData } = this.cm.activeLayer;
+		const layer = this.cm.activeLayer;
+		const { tileW, tileH } = this.getTileMetrics();
+		const { width, height, imageData } = layer;
 		const d = imageData.data;
 
-		for (let y = 0; y < ts; y++) {
-			for (let x = 0; x < ts; x++) {
-				const px = tx * ts + x;
-				const py = ty * ts + y;
+		const w = tileW[ tx ];
+		const h = tileH[ ty ];
+		const startX = tileW.slice(0, tx).reduce((a, v) => a + v, 0);
+		const startY = tileH.slice(0, ty).reduce((a, v) => a + v, 0);
+
+		for (let y = 0; y < h; y++) {
+			for (let x = 0; x < w; x++) {
+				const px = startX + x;
+				const py = startY + y;
 				if (px >= width || py >= height) continue;
 				const idx = (py * width + px) * 4;
 
 				if (this.isEraser) {
-					d[ idx + 3 ] = 0; // erase
+					d[ idx + 3 ] = 0;
 				} else {
 					d[ idx ] = color.r;
 					d[ idx + 1 ] = color.g;
@@ -174,62 +198,52 @@ export class DrawingTool {
 	}
 
 	applyMirrors(tx, ty, color, alpha) {
-		const { width, height } = this.cm.activeLayer;
-		const ts = this.tileSize;
-		const cols = Math.floor(width / ts);
-		const rows = Math.floor(height / ts);
+		const { cols, rows } = this.getTileMetrics();
 		const mirrors = [];
 
 		switch (this.mode) {
-			case "H":
-				mirrors.push({ tx, ty: rows - ty - 1 });
-				break;
-			case "V":
-				mirrors.push({ tx: cols - tx - 1, ty });
-				break;
+			case "H": mirrors.push({ tx, ty: rows - ty - 1 }); break;
+			case "V": mirrors.push({ tx: cols - tx - 1, ty }); break;
 			case "B":
 				mirrors.push({ tx, ty: rows - ty - 1 });
 				mirrors.push({ tx: cols - tx - 1, ty });
 				mirrors.push({ tx: cols - tx - 1, ty: rows - ty - 1 });
 				break;
-			case "D":
-				mirrors.push({ tx: cols - tx - 1, ty: rows - ty - 1 });
-				break;
+			case "D": mirrors.push({ tx: cols - tx - 1, ty: rows - ty - 1 }); break;
 		}
 
 		mirrors.forEach(m => this.applyTile(m.tx, m.ty, color, alpha));
 	}
 
+	getTileColor(tx, ty) {
+		const { tileW, tileH } = this.getTileMetrics();
+		const px = tileW.slice(0, tx).reduce((a, v) => a + v, 0);
+		const py = tileH.slice(0, ty).reduce((a, v) => a + v, 0);
+		return this.getPixelColor(px, py);
+	}
+
 	floodFillTile(startTx, startTy) {
-		const { width: layerWidth, height: layerHeight } = this.cm.activeLayer;
-		const ts = this.tileSize;
-		const width = Math.floor(layerWidth / ts);
-		const height = Math.floor(layerHeight / ts);
+		const layer = this.cm.activeLayer;
+		if (!layer) return;
+
+		const { cols, rows } = this.getTileMetrics();
+		const startColor = this.getTileColor(startTx, startTy);
 
 		const stack = [ { x: startTx, y: startTy } ];
 		const visited = new Set();
-		const newColor = this.currentColor;
-		const startColor = this.getPixelColor(startTx * ts, startTy * ts);
 
-		const getTileColor = (tx, ty) => {
-			const px = tx *ts;
-			const py = ty * ts;
-			return this.getPixelColor(px, py);
-		};
-
-		// search neighbours
 		while (stack.length) {
 			const { x: tx, y: ty } = stack.pop();
 			const key = `${tx},${ty}`;
 			if (visited.has(key)) continue;
 			visited.add(key);
 
-			if (tx < 0 || ty < 0 || tx >= width || ty >= height) continue;
+			if (tx < 0 || ty < 0 || tx >= cols || ty >= rows) continue;
 
-			const c = getTileColor(tx, ty);
-			if (c.r !== startColor.r || c.g !== startColor.g || c.b !== startColor.b) continue;
+			const c = this.getTileColor(tx, ty);
+			if (!this.colorsMatch(c, startColor)) continue;
 
-			this.applyTile(tx, ty, newColor, 255);
+			this.applyTile(tx, ty, this.currentColor, 255);
 
 			stack.push({ x: tx + 1, y: ty });
 			stack.push({ x: tx - 1, y: ty });
@@ -237,10 +251,10 @@ export class DrawingTool {
 			stack.push({ x: tx, y: ty - 1 });
 		}
 
+		this.cm.activeLayer.redraw();
 		this.cm.redraw();
 		snapshot("Flood Fill");
 	}
-
 
 	// ----------------------------
 	// Line Drawing
@@ -250,18 +264,12 @@ export class DrawingTool {
 
 		pixels.forEach(({ x, y }) => {
 			this.applyTile(x, y);
-			if (this.mode !== "N") {
-				this.applyMirrors(x, y, this.currentColor, 255);
-			}
+			if (this.mode !== "N") this.applyMirrors(x, y, this.currentColor, 255);
 		});
 
-		// NEW: sync layer’s buffer to its canvas
 		this.cm.activeLayer.redraw();
 		this.cm.redraw();
 	}
-
-
-
 
 	bresenham(x0, y0, x1, y1) {
 		const pixels = [];
@@ -279,9 +287,6 @@ export class DrawingTool {
 		return pixels;
 	}
 
-
-
-
 	// ----------------------------
 	// Misc
 	// ----------------------------
@@ -292,17 +297,14 @@ export class DrawingTool {
 
 	updateDisplay() {
 		this.displayEl.textContent = `Mode: ${this.mode} | Color: ${this.isEraser ? "Eraser" : this.colorPicker.value}`;
-
 	}
 }
 
-// DrawingTool.js prototype augmentation
+// ----------------------------
+// Prototype augmentation
+// ----------------------------
 DrawingTool.prototype.getState = function () {
-	return {
-		mode: this.mode,
-		isEraser: this.isEraser,
-		tileSize: this.tileSize
-	};
+	return { mode: this.mode, isEraser: this.isEraser, tileSize: this.tileSize };
 };
 
 DrawingTool.prototype.setState = function (state) {
@@ -311,7 +313,6 @@ DrawingTool.prototype.setState = function (state) {
 	this.tileSize = state.tileSize;
 	this.updateDisplay();
 
-	// update radio buttons in DOM
 	document.querySelectorAll('input[name="toolMode"]').forEach(radio => {
 		radio.checked = (radio.value === this.mode || (this.isEraser && radio.value === "eraser"));
 	});
