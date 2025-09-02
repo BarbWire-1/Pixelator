@@ -88,7 +88,7 @@ canvas {
 
 
 /* Sidebar sections */
-.sidebar-section {
+.sidebar-section.snapped {
      background: #333;
      padding: 10px;
      border-radius: 8px;
@@ -575,6 +575,29 @@ input[type="number"]::-webkit-outer-spin-button {
      border-radius: 6px;
      margin-bottom: 4px;
 }
+
 canvas {
      max-width: 70%
+}
+
+/* Base for all sections */
+/* .sidebar-section {
+     transition: all 0.02s ease;
+
+} */
+
+/* Default sidebar sections: not resizable */
+.sidebar-section.snapped {
+     resize: none;
+
+     /* required for resize to work when enabled */
+}
+
+/* Only resizable when floating */
+.sidebar-section.floating {
+     resize: horizontal;
+     /* horizontal + vertical */
+     overflow: auto;
+     min-width: 100px;
+     min-height: 50px;
 }

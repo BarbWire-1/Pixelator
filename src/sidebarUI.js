@@ -58,9 +58,9 @@
 		}
 
 		section.el.classList.remove("floating");
-		section.el.style.position = "";
-		section.el.style.left = "";
-		section.el.style.top = "";
+		section.el.classList.add("snapped");
+		section.el.style=""
+		
 	};
 
 	const resolveFloatingOverlap = (section, others) => {
@@ -105,6 +105,7 @@
 
 				if (!isDragging && Math.sqrt(dx * dx + dy * dy) > 5) {
 					isDragging = true;
+					el.classList.remove("floating");
 					el.classList.add("floating");
 					el.style.position = "absolute";
 					document.body.appendChild(el);
