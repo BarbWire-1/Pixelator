@@ -32,7 +32,7 @@ export function initPixelator() {
 		zoomInput: document.getElementById("zoom"),
 		undoBtn: document.getElementById("undoBtn"),
 		redoBtn: document.getElementById("redoBtn"),
-		alphaCheck: document.getElementById('alpha')
+		//alphaCheck: document.getElementById('alpha')
 	};
 	const logPanel = document.getElementById("log-panel");
 
@@ -55,7 +55,7 @@ export function initPixelator() {
 	);
 
 
-elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.checked)
+// elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.checked)
 	document.getElementById("downloadBtn")
 		.addEventListener('click', () => {
 			console.log("clicked dl")
@@ -69,31 +69,20 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 			//cm.downloadImage()
 			snapshot("Image loaded")
 		})
- 	// --- Snapshot / History ---
-	function snapshot(desc = "") {
-		const state = {
-			layer: cm.activeLayer
-				? {
-					width: cm.activeLayer.width,
-					height: cm.activeLayer.height,
-					imageData: new ImageData(
-						new Uint8ClampedArray(cm.activeLayer.imageData.data),
-						cm.activeLayer.width,
-						cm.activeLayer.height
-					)
-				}
-				: null,
-			palette: pm.getPaletteState(),
-			// TODO HERE IS STH WRONG - also need upate select
-			tool: {
-				mode: tool.mode,          // "N", "H", "V", "B", "D", or "fillRegion"
-				isEraser: tool.isEraser
-			},
 
+
+
+	//HISTORY
+	function snapshot(desc = "", { transient = false } = {}) {
+		if (transient) return; // skip auto redraw snapshots
+
+		const state = {
+			canvas: cm.getState(),
+			palette: pm.getState(),
+			tool: tool.getState(),
 			tileSize: cm.tileSize,
 			colorCount: cm.colorCount,
 			toggleGrid: cm.toggleGrid,
-			mode: tool.isEraser ? "eraser" : "draw",
 			zoom: elements.zoomInput.value,
 			desc
 		};
@@ -103,115 +92,48 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 
 
 	async function restoreState(state) {
-		if (state.layer) {
-			// Replace activeLayer completely
-			cm.activeLayer = {
-				width: state.layer.width,
-				height: state.layer.height,
-				imageData: new ImageData(
-					new Uint8ClampedArray(state.layer.imageData.data),
-					state.layer.width,
-					state.layer.height
-				)
-			};
-			cm.resizeCanvas(cm.activeLayer.width, cm.activeLayer.height);
-			cm.redraw();
-		} else {
-			// Clear visible canvas without touching rawImage
-			cm.activeLayer &&  cm.activeLayer.imageData.data.fill(0);
-			cm.redraw();
+		if (!state) return;
 
-		}
+		cm.setState(state.canvas);
+		pm.setState(state.palette);
+		tool.setState(state.tool);
 
-
-		// Restore palette and tool
-		pm.setPaletteState(state.palette);
-		tool.isEraser = state.tool.isEraser;
-		tool.updateDisplay();
-
-		// --- Sync input elements ---
-		if (state.tileSize !== undefined) {
-			cm.tileSize = state.tileSize;
-			tool.tileSize = state.tileSize;
-			elements.tileSizeInput.value = state.tileSize;
-		}
-		if (state.colorCount !== undefined) {
-			cm.colorCount = state.colorCount;
-			elements.colorCountInput.value = state.colorCount;
-		}
-		if (state.toggleGrid !== undefined) {
-			cm.toggleGrid = state.toggleGrid;
-			elements.toggleGridCheckbox.checked = state.toggleGrid;
-			cm.redraw();
-		}
-		// Restore tool
-		if (state.tool) {
-			tool.mode = state.tool.mode;
-			tool.isEraser = state.tool.isEraser;
-			tool.updateDisplay();
-
-			// Update radio buttons
-			document.querySelectorAll('input[name="toolMode"]').forEach(radio => {
-				if (radio.value === tool.mode || (tool.isEraser && radio.value === "eraser")) {
-					radio.checked = true;
-				} else {
-					radio.checked = false;
-				}
-			});
-		}
-		if (state.zoom !== undefined) {
-			elements.zoomInput.value = state.zoom;
-			const scale = parseFloat(state.zoom);
-			elements.canvas.style.transform = `scale(${scale})`;
-		}
+		elements.tileSizeInput.value = cm.tileSize;
+		elements.colorCountInput.value = cm.colorCount;
+		elements.toggleGridCheckbox.checked = cm.toggleGrid;
+		elements.zoomInput.value = state.zoom;
+		elements.canvas.style.transform = `scale(${parseFloat(state.zoom)})`;
 
 		debug("Inputs synced to history state");
 	}
 
-// 	function snapshot(desc = "") {
-// 		const state = {
-// 			canvas: cm.getState(),
-// 			palette: pm.getState(),
-// 			tool: tool.getState(),
-// 			zoom: elements.zoomInput.value,
-// 			desc
-// 		};
-// 		history.push(state);
-// 		debug("Snapshot taken:", desc);
-// 	}
-//
-// 	async function restoreState(state) {
-// 		cm.setState(state.canvas);
-// 		pm.setState(state.palette);
-// 		tool.setState(state.tool);
-//
-// 		elements.zoomInput.value = state.zoom;
-// 		elements.canvas.style.transform = `scale(${parseFloat(state.zoom)})`;
-//
-// 		debug("Inputs synced to history state");
-// 	}
+
+
 
 
 
 	// --- Event Listeners ---
+	// --- Tool listeners ---
 	function setupToolListeners() {
 		document.querySelectorAll('input[name="toolMode"]').forEach(radio => {
 			radio.addEventListener("change", () => {
 				tool.isEraser = radio.value === "eraser";
 				tool.updateDisplay();
+				snapshot(`Tool changed to ${tool.mode}`);
 			});
 		});
 	}
 
+	// --- Palette listeners ---
 	function setupPaletteListeners() {
 		elements.eraseBtn.addEventListener("click", () => {
 			pm.eraseSelectedPixels();
-			//snapshot("Erase selected swatch");
+			snapshot("Erased selected swatch");
 		});
 
 		elements.createPaletteBtn.addEventListener("click", () => {
 			pm.createPalette();
-			//snapshot("Created new palette");
+			snapshot("Created new palette");
 		});
 
 		const hexToRgb = hex =>
@@ -219,62 +141,59 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 
 		const handlePicker = (e) => {
 			const [ r, g, b ] = hexToRgb(e.target.value);
-			const isCommit = e.type === "change"; // only true when user releases
+			const isCommit = e.type === "change"; // only commit on release
 			pm.recolorSelectedPixels(r, g, b, isCommit);
-			if (isCommit) snapshot("Recolored");
+			if (isCommit) snapshot("Recolored selected swatch");
 		};
 
 		elements.colorPicker.addEventListener("input", handlePicker);
 		elements.colorPicker.addEventListener("change", handlePicker);
-
-
 	}
 
+	// --- Grid toggle ---
 	function setupGridListener() {
 		elements.toggleGridCheckbox.addEventListener("change", () => {
 			cm.toggleGrid = elements.toggleGridCheckbox.checked;
 			cm.redraw();
-			//snapshot("Toggle grid");
+			snapshot("Toggle grid");
 		});
-
 	}
 
+	// --- Tile size & color count ---
 	function setupTileAndColorInputs() {
-		elements.liveUpdateInput.addEventListener('change', (e) => cm.liveUpdate = e.target.checked)
-		elements.tileSizeInput.addEventListener("change",async (e) => {
+		elements.liveUpdateInput.addEventListener('change', (e) => cm.liveUpdate = e.target.checked);
+
+		elements.tileSizeInput.addEventListener("change", async (e) => {
 			cm.tileSize = parseInt(e.target.value, 10) || 1;
 			tool.tileSize = cm.tileSize;
 			if (cm.liveUpdate) {
-				await cm.applyQuantizeAndTile(); pm.createPalette(); snapshot('Live update')
+				await cm.applyQuantizeAndTile();
+				pm.createPalette();
+				snapshot('Live update tileSize applied');
 			} else {
-				cm.redraw()
+				cm.redraw();
+				snapshot(`Tile size changed to ${cm.tileSize}`);
 			}
-
 		});
+
 		elements.colorCountInput.addEventListener("change", (e) => {
 			cm.colorCount = parseInt(e.target.value, 10) || 16;
+			snapshot(`Color count changed to ${cm.colorCount}`);
 		});
 	}
 
+	// --- Quantize button ---
 	function setupQuantizeButton() {
 		elements.quantizeTileBtn.addEventListener("click", async () => {
 			if (!cm.activeLayer || !cm.activeLayer.rawImage) return;
-			await cm.applyQuantizeAndTile(cm.activeLayer.rawImage, cm.colorCount, cm.tileSize);
+			await cm.applyQuantizeAndTile();
 			pm.createPalette();
-			snapshot(`Quantize image with ${cm.colorCount} colors, tile size ${cm.tileSize}`);
-
-
+			snapshot(`Quantized image with ${cm.colorCount} colors, tile size ${cm.tileSize}`);
 		});
 	}
 
+	// --- Image loader ---
 	function setupImageLoader() {
-		CanvasManager.prototype.loadImageAsync = function (img) {
-			return new Promise(resolve => {
-				this.loadImage(img);
-				requestAnimationFrame(() => resolve());
-			});
-		};
-
 		elements.fileInput.addEventListener("change", (e) => {
 			const file = e.target.files[ 0 ];
 			if (!file) return;
@@ -283,15 +202,17 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 			img.src = URL.createObjectURL(file);
 
 			img.onload = async () => {
-				await cm.loadImageAsync(img);
+				await cm.loadImage(img);
+				setupLayerPanelBindings(cm)
 				elements.quantizeTileBtn.disabled = false;
-				snapshot("Load image");
+				snapshot("Image loaded");
 			};
+
 			logPanel.innerHTML = "";
-			elements.swatchesContainer.innerHTML = ""
+			elements.swatchesContainer.innerHTML = "";
+
 		});
 	}
-
 	function setupZoom() {
 		const container = document.getElementById("canvas-container");
 		const canvas = elements.canvas;
@@ -300,19 +221,57 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 		elements.zoomInput.addEventListener("input", () => {
 			const scale = parseFloat(elements.zoomInput.value);
 
-			// switch origin depending on scale
+			// Change transform origin depending on scale
 			canvas.style.transformOrigin = scale > 1 ? "top left" : "center center";
 			canvas.style.transform = `scale(${scale})`;
 
-			// save scroll relative to canvas top-left
+			// Save scroll relative to canvas top-left
 			const scrollX = container.scrollLeft;
 			const scrollY = container.scrollTop;
 
-			// restore scroll proportionally
+			// Restore scroll proportionally
 			container.scrollLeft = scrollX * (scale / lastScale);
 			container.scrollTop = scrollY * (scale / lastScale);
 
 			lastScale = scale;
+		});
+
+		// Commit snapshot only on release (change event), not every input
+		elements.zoomInput.addEventListener("change", () => {
+			snapshot(`Zoom set to ${elements.zoomInput.value}`);
+		});
+	}
+	// --- Layer panel bindings ---
+	function setupLayerPanelBindings(cm) {
+		const panel = document.getElementById("layer-panel");
+		if (!panel) return;
+
+		cm.layers.forEach((layer, idx) => {
+			const entry = panel.querySelector(`.layer-entry[data-index="${idx}"]`);
+			if (!entry) return;
+
+			const checkbox = entry.querySelector(".layer-visible");
+			const slider = entry.querySelector(".layer-opacity");
+
+			if (checkbox) {
+
+				checkbox.checked = layer.visible ?? true;
+				checkbox.addEventListener("change", () => {
+					layer.visible = checkbox.checked;
+					layer.redraw()
+					cm.redraw();
+				});
+			}
+
+			if (slider) {
+
+				slider.value = layer.opacity ?? 1;
+				slider.addEventListener("input", () => {
+					layer.opacity = parseFloat(slider.value);
+					layer.redraw()
+					cm.redraw();
+				});
+			}
 		});
 	}
 
@@ -320,7 +279,7 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 
 
 
-
+	// --- Undo / Redo ---
 	function setupUndoRedo() {
 		elements.undoBtn.addEventListener("click", () => {
 			const state = history.undo();
@@ -335,6 +294,7 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 
 
 
+
 	// --- Initialize all ---
 	setupToolListeners();
 	setupPaletteListeners();
@@ -343,6 +303,7 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.allOpaque = e.target.chec
 	setupQuantizeButton();
 	setupImageLoader();
 	setupZoom();
+
 	setupUndoRedo();
 
 

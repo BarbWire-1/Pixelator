@@ -38,7 +38,7 @@ function setColorAt(data, index, { r, g, b, a }) {
  */
 export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaque = false) {
 
-	console.log(imageData.data.length / 4)
+	//console.log(imageData.data.length / 4)
 	const stride = allOpaque ? 3 : 4; // allocated // number of array slots per pixel (RGB or RGBA)
 	const pixels = new Uint8Array((imageData.data.length / 4) * stride);
 	const uniqueColors = new Set();
@@ -54,13 +54,19 @@ export async function kMeansQuantize(imageData, k = 16, iterations = 10, allOpaq
 		pixels[ pIndex++ ] = r;
 		pixels[ pIndex++ ] = g;
 		pixels[ pIndex++ ] = b;
-		if (!allOpaque) pixels[ pIndex++ ] = a;
+		
 
-		if (allOpaque) {
-			uniqueColors.add((r << 16) | (g << 8) | b);
+		// alpha handling
+		if (r + g + b + a === 0) {
+			pixels[ pIndex++ ] = 0;        // keep fully transparent pixels as 0
+		} else if (allOpaque) {
+			pixels[ pIndex++ ] = 255;      // force opaque for all non-empty pixels
 		} else {
-			uniqueColors.add((r << 24) | (g << 16) | (b << 8) | a);
+			pixels[ pIndex++ ] = a;        // keep original alpha
 		}
+
+			uniqueColors.add((r << 24) | (g << 16) | (b << 8) | a);
+
 
 
 	}

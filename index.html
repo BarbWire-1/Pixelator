@@ -108,12 +108,23 @@
                          <label for="liveUpdateInput" title="Size of each tile">
                               <input type="checkbox" id="liveUpdateInput"
                                    title="choose whether image gets updated on tilesize change">Update Live</label>
-                         <label title="Make All Opaque"><input type="checkbox" id="alpha"> All Opaque</label>
+                         <!-- <label title="Make All Opaque"><input type="checkbox" id="alpha"> All Opaque</label> -->
                          <label title="Toggle grid overlay"><input type="checkbox" id="toggleGrid"> Show Grid</label>
 
-                         <div id="layer-panel">
-                              <!-- will be populated dynamically -->
+                    <div id="layer-panel">
+                         <div class="layer-entry" data-index="0">
+                              <input type="checkbox" class="layer-visible" checked>
+                              <span class="layer-name">BG Image</span>
+                              <input type="range" class="layer-opacity" min="0" max="1" step="0.05" value="0.5">
                          </div>
+                         <div class="layer-entry" data-index="1">
+                              <input type="checkbox" class="layer-visible" checked>
+                              <span class="layer-name">PX Layer</span>
+                              <input type="range" class="layer-opacity" min="0" max="1" step="0.05" value="1">
+                         </div>
+                         <!-- Add more entries if needed -->
+                    </div>
+
 
                          <button id="quantize-tile-btn" disabled title="Quantize and tile the image">Quantize &
                               Tile</button>

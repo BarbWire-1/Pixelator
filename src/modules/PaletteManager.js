@@ -193,7 +193,7 @@ export class PaletteManager {
 		if (!pixels.length) return;
 		this.applyPixels(pixels, { erase: true });
 		this.selectedSwatch.div.classList.add("erased");
-		snapshot("Erase selected swatch");
+		//snapshot("Erase selected swatch");
 	}
 
 	recolorSelectedPixels(r, g, b) {
@@ -209,31 +209,25 @@ export class PaletteManager {
 		this.colorPicker.value = this.rgbToHex(r, g, b);
 	}
 
-	// -----------------------------
-	// HISTORY SUPPORT
-	// -----------------------------
-	getPaletteState() {
-		return this.swatches.map(s => ({ r: s.r, g: s.g, b: s.b, selected: this.selectedSwatch === s }));
-	}
-
-	setPaletteState(state) {
-		this.clearPaletteContainer();
-		this.addDeselectSwatch();
-
-		state.forEach(({ r, g, b, selected }) => {
-			const div = this.swatchTemplate.content.firstElementChild.cloneNode(true);
-			div.style.backgroundColor = `rgb(${r},${g},${b})`;
-			this.container.appendChild(div);
-
-			const swatch = { r, g, b, div };
-			this.swatches.push(swatch);
-			this.attachSwatchListeners(swatch);
-
-			if (selected) this.selectSwatch(swatch);
-		});
-	}
 
 	rgbToHex(r, g, b) {
 		return "#" + [ r, g, b ].map(x => x.toString(16).padStart(2, "0")).join("");
 	}
 }
+PaletteManager.prototype.getState = function () {
+	return this.swatches.map(s => ({ r: s.r, g: s.g, b: s.b, selected: this.selectedSwatch === s }));
+};
+
+PaletteManager.prototype.setState = function (state) {
+	this.clearPaletteContainer();
+	this.addDeselectSwatch();
+	state.forEach(({ r, g, b, selected }) => {
+		const div = this.swatchTemplate.content.firstElementChild.cloneNode(true);
+		div.style.backgroundColor = `rgb(${r},${g},${b})`;
+		this.container.appendChild(div);
+		const swatch = { r, g, b, div };
+		this.swatches.push(swatch);
+		this.attachSwatchListeners(swatch);
+		if (selected) this.selectSwatch(swatch);
+	});
+};

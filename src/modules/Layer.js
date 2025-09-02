@@ -1,3 +1,5 @@
+import { snapshot } from "../main.js";
+
 export class Layer {
 	constructor (width, height, name = "Layer", rawImage = null) {
 		this.width = width;
@@ -35,17 +37,7 @@ export class Layer {
 		this.redraw();
 	}
 
-	pushHistory(label = "edit") {
-		const snapshot = new ImageData(new Uint8ClampedArray(this.imageData.data), this.width, this.height);
-		this.history.push({ snapshot, label });
-	}
 
-	undo() {
-		if (!this.history.length) return;
-		const last = this.history.pop();
-		this.imageData.data.set(last.snapshot.data);
-		this.redraw();
-	}
 
 	redraw() {
 		this.ctx.putImageData(this.imageData, 0, 0);
@@ -105,10 +97,34 @@ export class Layer {
 		}
 
 		this.imageData.data.set(output);
-		this.pushHistory("quantize");
+	
 
 		this.redraw(); // redraw into this.canvas
 	}
 
+	getState() {
+		return {
+			width: this.width,
+			height: this.height,
+			imageData: new ImageData(
+				new Uint8ClampedArray(this.imageData.data),
+				this.width,
+				this.height
+			),
+			visible: this.visible,
+			opacity: this.opacity,
+			name: this.name,
+			rawImage: this.rawImage // optional reference
+		};
+	}
 
+	static fromState(state) {
+		const layer = new Layer(state.width, state.height, state.name);
+		layer.imageData = state.imageData;
+		layer.visible = state.visible;
+		layer.opacity = state.opacity;
+		layer.rawImage = state.rawImage;
+		layer.ctx.putImageData(layer.imageData, 0, 0);
+		return layer;
+	}
 }

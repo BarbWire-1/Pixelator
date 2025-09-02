@@ -14,47 +14,45 @@ import { Layer } from "../Layer.js";
 
 function renderLayerPanel(cm) {
 	const panel = document.getElementById("layer-panel");
-	panel.innerHTML = "";
+	//panel.innerHTML = "";
 
 	cm.layers.forEach((layer, idx) => {
-		const div = document.createElement("div");
-		div.className = "layer-entry";
-		if (cm.activeLayer === layer) {
-			div.classList.add("active-layer"); // highlight active
-		}
+		// const div = document.createElement("div");
+		// div.className = "layer-entry";
+
 
 		// Visibility toggle
-		const checkbox = document.createElement("input");
-		checkbox.type = "checkbox";
-		checkbox.checked = layer.visible ?? true; // default visible
+		// const checkbox = document.createElement("input");
+		// checkbox.type = "checkbox";
+		//checkbox.checked = layer.visible ?? true; // default visible
 		checkbox.addEventListener("change", () => {
 			layer.visible = checkbox.checked;
 			cm.redraw();
 		});
 
 		// Opacity slider
-		const slider = document.createElement("input");
-		slider.type = "range";
-		slider.min = 0;
-		slider.max = 1;
-		slider.step = 0.05;
-		slider.value = layer.opacity ?? 1;
+		// const slider = document.createElement("input");
+		// slider.type = "range";
+		// slider.min = 0;
+		// slider.max = 1;
+		// slider.step = 0.05;
+		// slider.value = layer.opacity ?? 1;
 		slider.addEventListener("input", () => {
 			layer.opacity = parseFloat(slider.value);
 			cm.redraw();
 		});
 
 		// Label (click to set active layer)
-		const label = document.createElement("span");
-		label.textContent = layer.name;
-		label.style.cursor = "pointer";
-		label.addEventListener("click", () => {
-			cm.activeLayer = layer;
-			renderLayerPanel(cm); // re-render to update highlight
-		});
+		// const label = document.createElement("span");
+		// label.textContent = layer.name;
+		// label.style.cursor = "pointer";
+		// label.addEventListener("click", () => {
+		// 	cm.activeLayer = layer;
+		// 	renderLayerPanel(cm); // re-render to update highlight
+		// });
 
-		div.append(checkbox, label, slider);
-		panel.append(div);
+		// div.append(checkbox, label, slider);
+		// panel.append(div);
 	});
 }
 
@@ -160,12 +158,6 @@ export class CanvasManager {
 	createTempCanvas(img, width, height, smoothing = false, stepName = "Temp Canvas") {
 		const start = performance.now();
 
-		// // Allocate once and reuse
-		// if (!this.tempCanvas) {
-		// 	this.tempCanvas = document.createElement("canvas");
-		// 	this.tempCtx = this.tempCanvas.getContext("2d", { willReadFrequently: true });
-		// }
-
 		this._drawToCtx(this.tempCtx, img, width, height, smoothing);
 
 		this.log(`${stepName} done in ${(performance.now() - start).toFixed(2)} ms`);
@@ -186,17 +178,17 @@ export class CanvasManager {
 		const imageData = this.ctx.getImageData(0, 0, targetW, targetH);
 
 		// Original Image (display only, semi-transparent)
-		const original = new Layer(targetW, targetH, "Original Image", img);
+		const original = new Layer(targetW, targetH, "BG Image", img);
 		original.imageData = new ImageData(
 			new Uint8ClampedArray(imageData.data),
 			imageData.width,
 			imageData.height
 		);
 		original.ctx.putImageData(original.imageData, 0, 0);
-		original.opacity = 0.3;
+		original.opacity = 0.5;
 
 		// Base Layer (working copy)
-		const base = new Layer(targetW, targetH, "Base Layer", img);
+		const base = new Layer(targetW, targetH, "PX Layer", img);
 		base.imageData = new ImageData(
 			new Uint8ClampedArray(imageData.data),
 			imageData.width,
@@ -212,9 +204,7 @@ export class CanvasManager {
 		this.activeLayer = base;
 
 		this.redraw();
-		if (document.getElementById("layer-panel")) {
-			renderLayerPanel(this);
-		}
+		
 
 		this.log(`Image loaded: ${img.width}x${img.height}`);
 		return base;
@@ -413,36 +403,85 @@ export class CanvasManager {
 // =====================
 // HISTORY SUPPORT
 // =====================
+// CanvasManager.prototype.getState = function () {
+// 	return {
+// 		activeLayer: this.activeLayer
+// 			? {
+// 				width: this.activeLayer.width,
+// 				height: this.activeLayer.height,
+// 				data: new Uint8ClampedArray(this.activeLayer.imageData.data)
+// 			}
+// 			: null,
+// 		tileSize: this.tileSize,
+// 		colorCount: this.colorCount,
+// 		toggleGrid: this.toggleGrid
+// 	};
+// };
+//
+// CanvasManager.prototype.setState = function (state) {
+// 	if (state.activeLayer) {
+// 		this.activeLayer = {
+// 			width: state.activeLayer.width,
+// 			height: state.activeLayer.height,
+// 			imageData: new ImageData(
+// 				new Uint8ClampedArray(state.activeLayer.data),
+// 				state.activeLayer.width,
+// 				state.activeLayer.height
+// 			)
+// 		};
+// 		this.resizeCanvas(state.activeLayer.width, state.activeLayer.height);
+// 	}
+// 	this.tileSize = state.tileSize;
+// 	this.colorCount = state.colorCount;
+// 	this.toggleGrid = state.toggleGrid;
+// 	this.redraw();
+// };
 CanvasManager.prototype.getState = function () {
 	return {
-		activeLayer: this.activeLayer
-			? {
-				width: this.activeLayer.width,
-				height: this.activeLayer.height,
-				data: new Uint8ClampedArray(this.activeLayer.imageData.data)
-			}
-			: null,
 		tileSize: this.tileSize,
 		colorCount: this.colorCount,
-		toggleGrid: this.toggleGrid
+		toggleGrid: this.toggleGrid,
+		activeIndex: this.layers.indexOf(this.activeLayer),
+		layers: this.layers.map(layer => ({
+			name: layer.name,
+			width: layer.width,
+			height: layer.height,
+			imageData: new ImageData(new Uint8ClampedArray(layer.imageData.data), layer.width, layer.height),
+			clusteredData: layer.clusteredData ? [ ...layer.clusteredData ] : null,
+			opacity: layer.opacity ?? 1,
+			hidden: layer.hidden ?? false,
+			// **keep rawImage reference, but never mutate it**
+			rawImage: layer.rawImage || null
+		}))
 	};
 };
 
 CanvasManager.prototype.setState = function (state) {
-	if (state.activeLayer) {
-		this.activeLayer = {
-			width: state.activeLayer.width,
-			height: state.activeLayer.height,
-			imageData: new ImageData(
-				new Uint8ClampedArray(state.activeLayer.data),
-				state.activeLayer.width,
-				state.activeLayer.height
-			)
-		};
-		this.resizeCanvas(state.activeLayer.width, state.activeLayer.height);
-	}
+	if (!state || !state.layers) return;
+
+	// Restore layer properties in-place
+	state.layers.forEach((savedLayer, idx) => {
+		const layer = this.layers[ idx ];
+		if (!layer) return;
+
+		layer.width = savedLayer.width;
+		layer.height = savedLayer.height;
+		layer.opacity = savedLayer.opacity ?? 1;
+		layer.hidden = savedLayer.hidden ?? false;
+
+		// Keep rawImage intact
+		layer.imageData.data.set(savedLayer.imageData.data);
+		layer.ctx.putImageData(layer.imageData, 0, 0);
+
+		layer.clusteredData = savedLayer.clusteredData ? [ ...savedLayer.clusteredData ] : null;
+	});
+
+	// Restore active layer by index
+	this.activeLayer = this.layers[ state.activeIndex ] || this.layers[ 0 ];
+
 	this.tileSize = state.tileSize;
 	this.colorCount = state.colorCount;
 	this.toggleGrid = state.toggleGrid;
+
 	this.redraw();
 };

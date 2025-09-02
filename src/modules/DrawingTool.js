@@ -304,7 +304,11 @@ export class DrawingTool {
 // Prototype augmentation
 // ----------------------------
 DrawingTool.prototype.getState = function () {
-	return { mode: this.mode, isEraser: this.isEraser, tileSize: this.tileSize };
+	return {
+		mode: this.mode,
+		isEraser: this.isEraser,
+		tileSize: this.tileSize
+	};
 };
 
 DrawingTool.prototype.setState = function (state) {
@@ -312,8 +316,4 @@ DrawingTool.prototype.setState = function (state) {
 	this.isEraser = state.isEraser;
 	this.tileSize = state.tileSize;
 	this.updateDisplay();
-
-	document.querySelectorAll('input[name="toolMode"]').forEach(radio => {
-		radio.checked = (radio.value === this.mode || (this.isEraser && radio.value === "eraser"));
-	});
 };
