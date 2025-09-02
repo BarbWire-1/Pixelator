@@ -11,6 +11,55 @@ import { snapshot } from "../../main.js";
 
 
 import { Layer } from "../Layer.js";
+
+function renderLayerPanel(cm) {
+	const panel = document.getElementById("layer-panel");
+	panel.innerHTML = "";
+
+	cm.layers.forEach((layer, idx) => {
+		const div = document.createElement("div");
+		div.className = "layer-entry";
+		if (cm.activeLayer === layer) {
+			div.classList.add("active-layer"); // highlight active
+		}
+
+		// Visibility toggle
+		const checkbox = document.createElement("input");
+		checkbox.type = "checkbox";
+		checkbox.checked = layer.visible ?? true; // default visible
+		checkbox.addEventListener("change", () => {
+			layer.visible = checkbox.checked;
+			cm.redraw();
+		});
+
+		// Opacity slider
+		const slider = document.createElement("input");
+		slider.type = "range";
+		slider.min = 0;
+		slider.max = 1;
+		slider.step = 0.05;
+		slider.value = layer.opacity ?? 1;
+		slider.addEventListener("input", () => {
+			layer.opacity = parseFloat(slider.value);
+			cm.redraw();
+		});
+
+		// Label (click to set active layer)
+		const label = document.createElement("span");
+		label.textContent = layer.name;
+		label.style.cursor = "pointer";
+		label.addEventListener("click", () => {
+			cm.activeLayer = layer;
+			renderLayerPanel(cm); // re-render to update highlight
+		});
+
+		div.append(checkbox, label, slider);
+		panel.append(div);
+	});
+}
+
+
+
 //=========================
 // CANVAS MANAGER
 //=========================
@@ -130,41 +179,47 @@ export class CanvasManager {
 	// Image Loading
 	// --------------------
 	async loadImage(img) {
-		const start = performance.now();
-// TODO later draw on layer ctx - now only virtual
 		const { targetW, targetH } = this.setContainerDimensions(img);
+
+		// Draw scaled image
 		this._drawToCtx(this.ctx, img, targetW, targetH, false);
 		const imageData = this.ctx.getImageData(0, 0, targetW, targetH);
 
-		// Create a new base layer that owns the raw image
-		const layer = new Layer(targetW, targetH, "Base Layer", img);
-		layer.imageData = imageData;
+		// Original Image (display only, semi-transparent)
+		const original = new Layer(targetW, targetH, "Original Image", img);
+		original.imageData = new ImageData(
+			new Uint8ClampedArray(imageData.data),
+			imageData.width,
+			imageData.height
+		);
+		original.ctx.putImageData(original.imageData, 0, 0);
+		original.opacity = 0.3;
 
-		this.layers = [ layer ];
-		this.activeLayer = layer;
+		// Base Layer (working copy)
+		const base = new Layer(targetW, targetH, "Base Layer", img);
+		base.imageData = new ImageData(
+			new Uint8ClampedArray(imageData.data),
+			imageData.width,
+			imageData.height
+		);
+		base.ctx.putImageData(base.imageData, 0, 0);
 
-		const layerNames = [ "Original Image", "Base Layer" ];
-		this.layers = layerNames.map(name => {
-			const layer = new Layer(targetW, targetH, name, img);
-			// create a copy of the imageData for each layer
-			layer.imageData = new ImageData(
-				new Uint8ClampedArray(imageData.data),
-				imageData.width,
-				imageData.height
-			);
-			layer.ctx.putImageData(layer.imageData, 0, 0); // bake imageData into canvas
-			return layer;
-		});
+		// Keep raw image reference for quantization
+		base.rawImage = img;
 
-		this.activeLayer = this.layers[ 1 ]; // Base Layer active
-		//TODO for testing only - implement ranges and checkboxes for visibility per layer
-		this.layers[ 0 ].opacity = 0.3;
+		// Assign layers
+		this.layers = [ original, base ];
+		this.activeLayer = base;
 
 		this.redraw();
+		if (document.getElementById("layer-panel")) {
+			renderLayerPanel(this);
+		}
 
-		this.log(`Image loaded: ${img.width}x${img.height}, scaled to ${targetW}x${targetH} in ${(performance.now() - start).toFixed(2)} ms`);
-		return layer;
+		this.log(`Image loaded: ${img.width}x${img.height}`);
+		return base;
 	}
+
 
 
 	setContainerDimensions(img) {
@@ -200,6 +255,7 @@ export class CanvasManager {
 		}
 
 		if (this.toggleGrid) this.drawGrid();
+
 	}
 
 
@@ -250,43 +306,45 @@ export class CanvasManager {
 	// --------------------
 	async quantizeImage() {
 		if (!this.activeLayer || !this.dimensions) return;
-
-		const layer = this.activeLayer;
+		this.activeLayer.opacity = 1;
 		const { width: canvasW, height: canvasH } = this.dimensions;
+		const layer = this.activeLayer;
 
-		// Only work on the pixelation layer
+		// Always start from the raw image
+		const source = layer.rawImage;
+		if (!source) {
+			this.log("No rawImage available for quantization.");
+			return;
+		}
+
+		// Downscale
 		const downscaledWidth = this.tileSize === 1 ? canvasW : Math.ceil(canvasW / this.tileSize);
 		const downscaledHeight = this.tileSize === 1 ? canvasH : Math.ceil(canvasH / this.tileSize);
 
-		// Step 1: Create temporary canvas for quantization
+		// Step 1: Create temporary canvas
 		const tempCanvas = await this.timedLog("Quantize Temp Canvas", async () => {
-			return this.createTempCanvas(layer.rawImage || layer.canvas, downscaledWidth, downscaledHeight, false);
+			return this.createTempCanvas(source, downscaledWidth, downscaledHeight, false);
 		});
 
-		// Step 2: Run kMeans quantization in worker
+		// Step 2: Run quantization
 		const { palette, clusteredData, uniqueCount } = await this.timedLog("kMeans Quantization", async () => {
 			return this.runQuantizationInWorker(tempCanvas, this.colorCount);
 		});
 
-		// Step 3: Store palette & clustered data on the layer
-		await this.timedLog("Store clustered data", async () => {
-			layer.colorClusters = palette.map(color => ({ color }));
-			Object.assign(layer, {
-				clusteredData,
-				tempWidth: downscaledWidth,
-				tempHeight: downscaledHeight,
-				colors: palette
-			});
+		// Step 3: Store result on layer
+		Object.assign(layer, {
+			clusteredData,
+			tempWidth: downscaledWidth,
+			tempHeight: downscaledHeight,
+			colors: palette
 		});
 
-		// Step 4: Apply clustered data (upscale if needed)
-		await this.timedLog("Apply clustered data", async () => {
-			layer.applyClusteredData(clusteredData, downscaledWidth, downscaledHeight, this.tileSize);
-		});
+		// Step 4: Apply clustered data
+		layer.applyClusteredData(clusteredData, downscaledWidth, downscaledHeight, this.tileSize);
 
-		// Step 5: Log summary
+		// Step 5: Log
 		const totalPixels = canvasW * canvasH;
-		this.log(`quantizeImage: done, totalPixels: ${totalPixels}, uniqueColors: ${uniqueCount}, new palette length: ${palette.length}`);
+		this.log(`quantizeImage: done, totalPixels=${totalPixels}, uniqueColors=${uniqueCount}, palette=${palette.length}`);
 	}
 
 	// --------------------
@@ -385,37 +443,4 @@ CanvasManager.prototype.setState = function (state) {
 	this.colorCount = state.colorCount;
 	this.toggleGrid = state.toggleGrid;
 	this.redraw();
-};
-
-CanvasManager.prototype.reQuantize = async function ({
-	useRaw = true,
-	tileSize = this.tileSize,
-	colorCount = this.colorCount,
-	preservePalette = false
-} = {}) {
-	const sourceImg = useRaw ? this.rawImage : this.activeLayer;
-	if (!sourceImg) return;
-
-	const tempCanvas = this.createTempCanvas(
-		sourceImg,
-		(this.dimensions.width / tileSize),
-		(this.dimensions.height / tileSize)
-	);
-
-	let clusteredData, palette;
-	if (preservePalette && this.activeLayer?.colors?.length) {
-		palette = this.activeLayer.colors;
-		clusteredData = mapPixelsToPalette(tempCanvas, palette);
-	} else {
-		({ palette, clusteredData } = await this.runQuantizationInWorker(tempCanvas, colorCount));
-	}
-
-	const layer = this.mapClusteredToLayer(clusteredData, this.dimensions.width, this.dimensions.height, tileSize);
-
-	this.layers.push(layer);
-	this.activeLayer = layer;
-	layer.colors = palette;
-	this.redraw();
-
-	this.log(`Re-quantized using ${preservePalette ? 'existing palette' : colorCount + ' colors'}`);
 };

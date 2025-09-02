@@ -81,7 +81,7 @@ export class PaletteManager {
 		div.title = "Keep pressed to highlight pixels";
 		this.container.appendChild(div);
 
-		const swatch = { r, g, b, a, div, indices };
+		const swatch = { r, g, b,  div, indices };
 		this.swatches.push(swatch);
 		this.attachSwatchListeners(swatch);
 		return swatch;
