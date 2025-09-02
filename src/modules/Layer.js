@@ -106,6 +106,7 @@ export class Layer {
 
 		this.imageData.data.set(output);
 		this.pushHistory("quantize");
+
 		this.redraw(); // redraw into this.canvas
 	}
 

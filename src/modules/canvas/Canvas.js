@@ -306,6 +306,7 @@ export class CanvasManager {
 	// --------------------
 	async quantizeImage() {
 		if (!this.activeLayer || !this.dimensions) return;
+
 		this.activeLayer.opacity = 1;
 		const { width: canvasW, height: canvasH } = this.dimensions;
 		const layer = this.activeLayer;
@@ -336,7 +337,8 @@ export class CanvasManager {
 			clusteredData,
 			tempWidth: downscaledWidth,
 			tempHeight: downscaledHeight,
-			colors: palette
+			colors: palette,
+
 		});
 
 		// Step 4: Apply clustered data
