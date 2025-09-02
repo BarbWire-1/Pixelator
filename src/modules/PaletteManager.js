@@ -176,7 +176,9 @@ export class PaletteManager {
 	applyPixels(pixels, { r = null, g = null, b = null, erase = false } = {}) {
 		if (!pixels.length || !this.cm.activeLayer) return;
 
-		const data = this.cm.activeLayer.imageData.data;
+		const layer = this.cm.activeLayer;
+		const data = layer.imageData.data;
+
 		for (const p of pixels) {
 			const idx = p.index;
 			if (erase) {
@@ -188,8 +190,14 @@ export class PaletteManager {
 				data[ idx + 3 ] = 255;
 			}
 		}
+
+		// push imageData into the layer’s canvas
+		layer.ctx.putImageData(layer.imageData, 0, 0);
+
+		// composite all layers again
 		this.cm.redraw();
 	}
+
 
 	drawBoundingBox(pixels, color = "limegreen") {
 		if (!pixels.length) return;

@@ -18,6 +18,11 @@ export class CanvasManager {
 	constructor (canvas) {
 		this.canvas = canvas;
 		this.ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+		// Reusable tempCanvas
+		this.tempCanvas = document.createElement("canvas");
+		this.tempCtx = this.tempCanvas.getContext("2d", { willReadFrequently: true });
+
 		this.layers = [];
 		this.activeLayer = null;
 		this.toggleGrid = false;
@@ -105,18 +110,21 @@ export class CanvasManager {
 
 	createTempCanvas(img, width, height, smoothing = false, stepName = "Temp Canvas") {
 		const start = performance.now();
-		const tempCanvas = document.createElement("canvas");
-		this._drawToCtx(tempCanvas.getContext("2d"), img, width, height, smoothing);
+
+		// // Allocate once and reuse
+		// if (!this.tempCanvas) {
+		// 	this.tempCanvas = document.createElement("canvas");
+		// 	this.tempCtx = this.tempCanvas.getContext("2d", { willReadFrequently: true });
+		// }
+
+		this._drawToCtx(this.tempCtx, img, width, height, smoothing);
+
 		this.log(`${stepName} done in ${(performance.now() - start).toFixed(2)} ms`);
-		return tempCanvas;
+		return this.tempCanvas;
 	}
 
-	createDimensionCanvas(width, height) {
-		const tempCanvas = document.createElement("canvas");
-		tempCanvas.width = width;
-		tempCanvas.height = height;
-		return { tempCanvas, tctx: tempCanvas.getContext("2d") };
-	}
+
+
 
 	// --------------------
 	// Image Loading
@@ -150,7 +158,7 @@ export class CanvasManager {
 
 		this.activeLayer = this.layers[ 1 ]; // Base Layer active
 		//TODO for testing only - implement ranges and checkboxes for visibility per layer
-		this.layers[ 0 ].opacity = 0;
+		this.layers[ 0 ].opacity = 0.3;
 
 		this.redraw();
 
@@ -173,32 +181,6 @@ export class CanvasManager {
 		return { targetW, targetH };
 	}
 
-	// prepareCanvasForImage(img) {
-	// 	const start = performance.now();
-	// 	const { targetW, targetH } = this.setContainerDimensions(img);
-	// 	this.ctx.imageSmoothingEnabled = false;
-	// 	this.ctx.clearRect(0, 0, targetW, targetH);
-	// 	this.log(`Step 1 (prepare canvas) done in ${(performance.now() - start).toFixed(2)} ms`);
-	// 	return { targetW, targetH };
-	// }
-
-	// drawImageOnCanvas(img, width, height) {
-	// 	const start = performance.now();
-	// 	this._drawToCtx(this.ctx, img, width, height, false);
-	// 	const imageData = this.ctx.getImageData(0, 0, width, height);
-	// 	this.log(`Step 2 (draw image) done in ${(performance.now() - start).toFixed(2)} ms`);
-	// 	return imageData;
-	// }
-
-	// createBaseLayer(width, height, imageData) {
-	// 	const start = performance.now();
-	// 	const layer = new Layer(width, height, "Base Layer");
-	// 	layer.imageData = imageData;
-	// 	this.layers = [ layer ];
-	// 	this.activeLayer = layer;
-	// 	this.log(`Step 3 (create base layer) done in ${(performance.now() - start).toFixed(2)} ms`);
-	// 	return layer;
-	// }
 
 	// --------------------
 	// Canvas drawing
@@ -209,11 +191,17 @@ export class CanvasManager {
 	}
 
 	redraw() {
-		if (!this.activeLayer) return;
+		if (!this.layers.length) return;
+
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-		this.ctx.putImageData(this.activeLayer.imageData, 0, 0);
+
+		for (const layer of this.layers) {
+			layer.drawTo(this.ctx); // <- uses layer.canvas, opacity, visibility
+		}
+
 		if (this.toggleGrid) this.drawGrid();
 	}
+
 
 	drawGrid() {
 		if (!this.activeLayer) return;
