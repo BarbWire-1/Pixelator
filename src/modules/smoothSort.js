@@ -54,9 +54,10 @@ export function smoothSort(palette) {
 			const g = parseInt(item.slice(3, 5), 16);
 			const b = parseInt(item.slice(5, 7), 16);
 			return { ref: item, lab: rgbToLab([ r, g, b ]) };
-		} else if ("r" in item && "g" in item && "b" in item) {
-			return { ref: item, lab: rgbToLab([ item.r, item.g, item.b ]) };
-		} else {
+		} else if (Array.isArray(item) && item.length >= 3) {
+    return { ref: item, lab: rgbToLab([item[0], item[1], item[2]]) };
+}
+ else {
 			throw new Error("Unsupported palette item format");
 		}
 	});
