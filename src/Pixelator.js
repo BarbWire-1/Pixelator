@@ -2,9 +2,7 @@
 MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
-// TODO update all UI inputs on snapshot change!!!!!!
-// TODO ADD A GET-/SETSTATE TO ALL MODULES INVOLVED
-// tools, colorPicker and select not updated correctly, ramge???
+
 import { DrawingTool } from "./modules/DrawingTool.js";
 import { CanvasManager } from "./modules/canvas/Canvas.js";
 import { PaletteManager } from "./modules/PaletteManager.js";
@@ -41,6 +39,7 @@ export function initPixelator() {
 	const cm = new CanvasManager(elements.canvas);
 	const pm = new PaletteManager(cm, elements.swatchesContainer, elements.colorPicker);
 	const tool = new DrawingTool(cm, elements.colorPicker, elements.modeSelect, elements.displayEl);
+	cm.tool = tool;
 
 
 
@@ -350,11 +349,6 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e
 	});
 	document.getElementById('kMeans-iter').addEventListener('change', (e) => cm.kMeansIterations = +e.target.value)
 	snapshot("Initial state");
-
-
-
-
-	//MORE MESSY ADDITIONS
 
 
 

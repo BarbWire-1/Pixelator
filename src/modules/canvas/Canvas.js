@@ -8,6 +8,7 @@ Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 // TODO way too much colors, NOT SORTED AT ALL
 
 import { snapshot } from "../../main.js";
+import { DrawingTool } from "../DrawingTool.js";
 
 
 
@@ -24,40 +25,34 @@ import { upscaleClusteredData } from "./ClusteredDataUtils.js";
 //=========================
 export class CanvasManager {
 	constructor (canvas) {
+
+		this.tool = undefined
 		this.canvas = canvas;
 		this.canvas.width = 400;
 		this.canvas.height = 400;
 		this.ctx = canvas.getContext("2d", { willReadFrequently: true });
-		this.ctx.imageSmoothingEnabled= false;
-		// Reusable tempCanvas
+		this.ctx.imageSmoothingEnabled = false;
+
+
+
 		this.tempCanvas = document.createElement("canvas");
 		this.tempCtx = this.tempCanvas.getContext("2d", { willReadFrequently: true });
-
-
-		//this.drawingLayer = new Layer(this.canvas.width, this.canvas.height, "Drawing", null)
-		//this.layers = [ this.drawingLayer ];
-
-		//this.activeLayer = this.drawingLayer;
 
 		this.layers = [];
 		this.activeLayer = null;
 
 		this.toggleGrid = false;
 		this.tileSize = 1;
-		this.rawImage = null;
 
 		this.startTime = performance.now();
 		this.logEntries = [];
-
-
 		this.showLogs = true;
+
 		this.allOpaque = false;
-
-		this.liveUpdate = false;
-
 		this.kMeansIterations = 1;
 		this.worker = null;
 		this.colorCount = 16;
+		this.renderMetrics = {};
 	}
 
 	// --------------------
@@ -66,14 +61,10 @@ export class CanvasManager {
 	log(message) {
 		if (!this.showLogs) return;
 		const elapsed = ((performance.now() - this.startTime) / 1000).toFixed(3);
-		this.logEntries.push({
-			time: new Date().toLocaleTimeString(),
-			elapsed: parseFloat(elapsed),
-			message
-		});
+		this.logEntries.push({ time: new Date().toLocaleTimeString(), elapsed: parseFloat(elapsed), message });
 	}
-	getLogs() { return this.logEntries; }
 	clearLogs() { this.logEntries = []; }
+	getLogs() { return this.logEntries; }
 
 	// --------------------
 	// Worker
@@ -87,37 +78,25 @@ export class CanvasManager {
 	runQuantizationInWorker(tempCanvas, colorCount) {
 		return new Promise((resolve, reject) => {
 			this.initWorker();
-			const ctx = tempCanvas.getContext("2d");
-			const imageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-
+			const imageData = tempCanvas.getContext("2d").getImageData(0, 0, tempCanvas.width, tempCanvas.height);
 			const handler = (e) => {
-				const { success, palette, clusters,clusteredData, uniqueCount, error } = e.data;
-				if (success) resolve({ palette, clusters,clusteredData, uniqueCount });
+				const { success, palette, clusters, clusteredData, uniqueCount, error } = e.data;
+				if (success) resolve({ palette, clusters, clusteredData, uniqueCount });
 				else reject(new Error(error));
 				this.worker.removeEventListener("message", handler);
 			};
-
 			this.worker.addEventListener("message", handler);
-			// pass allOpaque flag to the worker
-			this.worker.postMessage({
-				imageData,
-				colorCount,
-
-				iterations: this.kMeansIterations,
-				allOpaque: this.allOpaque
-			});
+			this.worker.postMessage({ imageData, colorCount, iterations: this.kMeansIterations, allOpaque: this.allOpaque });
 		});
 	}
-
 
 	// --------------------
 	// Canvas helpers
 	// --------------------
 	_drawToCtx(ctx, img, width, height, smoothing = false) {
-		const c = ctx.canvas;
-		if (c.width !== width || c.height !== height) {
-			c.width = width;
-			c.height = height;
+		if (ctx.canvas.width !== width || ctx.canvas.height !== height) {
+			ctx.canvas.width = width;
+			ctx.canvas.height = height;
 		}
 		ctx.imageSmoothingEnabled = smoothing;
 		ctx.clearRect(0, 0, width, height);
@@ -127,295 +106,176 @@ export class CanvasManager {
 
 	createTempCanvas(img, width, height, smoothing = false, stepName = "Temp Canvas") {
 		const start = performance.now();
-
 		this._drawToCtx(this.tempCtx, img, width, height, smoothing);
-
 		this.log(`${stepName} done in ${(performance.now() - start).toFixed(2)} ms`);
 		return this.tempCanvas;
 	}
-
-
-
 
 	// --------------------
 	// Image Loading
 	// --------------------
 	async loadImage(img) {
 		const { targetW, targetH } = this.setContainerDimensions(img);
-// 		// ✅ stretch the Drawing layer to match the new dimensions
-// 		if (this.drawingLayer) {
-// 			// capture existing sketch
-// 			const oldCanvas = this.drawingLayer.canvas;
-// 			const oldImg = new Image();
-// 			oldImg.src = oldCanvas.toDataURL();
-//
-// 			// resize drawingLayer canvas
-// 			this.drawingLayer.canvas.width = targetW;
-// 			this.drawingLayer.canvas.height = targetH;
-// 			this.drawingLayer.width = targetW;
-// 			this.drawingLayer.height = targetH;
-//
-// 			// redraw old sketch stretched into new size
-// 			oldImg.onload = () => {
-// 				this.drawingLayer.ctx.drawImage(oldImg, 0, 0, targetW, targetH);
-// 				this.redraw();
-// 			};
-// 		}
+		this.layers = [];
 
-		this.layers = []
-		// Draw scaled image
 		this._drawToCtx(this.ctx, img, targetW, targetH, false);
 		const imageData = this.ctx.getImageData(0, 0, targetW, targetH);
 
-
 		this.canvas.width = targetW;
-		this.canvas.height = targetH
-		// Original Image (display only, semi-transparent)
+		this.canvas.height = targetH;
+
 		const original = new Layer(targetW, targetH, "BG Image", img);
-		original.imageData = new ImageData(
-			new Uint8ClampedArray(imageData.data),
-			imageData.width,
-			imageData.height
-		);
+		original.imageData = new ImageData(new Uint8ClampedArray(imageData.data), targetW, targetH);
 		original.ctx.putImageData(original.imageData, 0, 0);
 		original.opacity = 0.5;
 
-		// Base Layer (working copy)
 		const base = new Layer(targetW, targetH, "PX Layer", img);
-		base.imageData = new ImageData(
-			new Uint8ClampedArray(imageData.data),
-			imageData.width,
-			imageData.height
-		);
+		base.imageData = new ImageData(new Uint8ClampedArray(imageData.data), targetW, targetH);
 		base.ctx.putImageData(base.imageData, 0, 0);
-
-		// Keep raw image reference for quantization
 		base.rawImage = img;
 
-		// Assign layers
-		[ original, base ].forEach(l => this.layers.push(l));
+		this.layers.push(original, base);
 		this.activeLayer = base;
 
 		this.redraw();
-
-
 		this.log(`Image loaded: ${img.width}x${img.height}`);
 		return base;
 	}
 
+	// --------------------
+	// Render Metrics (computed on demand)
+	// --------------------
+	updateRenderMetrics() {
+    if (!this.activeLayer) return;
 
+    const rect = this.canvas.getBoundingClientRect();
+    const canvasW = this.canvas.width;
+    const canvasH = this.canvas.height;
 
-	setContainerDimensions(img) {
-		//const container = document.getElementById("canvas-container");
-		const margin = 0;
-		const maxSize = 800;
+    // Always derived from tileSize
+    const tempW = Math.ceil(canvasW / this.tileSize);
+    const tempH = Math.ceil(canvasH / this.tileSize);
 
-		// aspect ratio
-		const ratio = img.width / img.height;
+    const scaleX = canvasW / rect.width;
+    const scaleY = canvasH / rect.height;
 
-		let targetW, targetH;
-
-		if (ratio > 1) {
-			// wider than tall → width = max, scale height
-			targetW = maxSize;
-			targetH = Math.round(maxSize / ratio);
-		} else {
-			// taller than wide → height = max, scale width
-			targetH = maxSize;
-			targetW = Math.round(maxSize * ratio);
-		}
-
-		this.dimensions = { width: targetW, height: targetH, ratio };
-		this.resizeCanvas(targetW, targetH);
-
-		return { targetW, targetH };
-	}
+    this.renderMetrics = { canvasW, canvasH, rectW: rect.width, rectH: rect.height, scaleX, scaleY, tempW, tempH };
+}
 
 
 
 	// --------------------
 	// Canvas drawing
 	// --------------------
-	resizeCanvas(width, height) {
-		this.canvas.width = width;
-		this.canvas.height = height;
+	setContainerDimensions(img) {
+		const maxSize = 800;
+		const ratio = img.width / img.height;
+		let targetW, targetH;
+
+		if (ratio > 1) { targetW = maxSize; targetH = Math.round(maxSize / ratio); }
+		else { targetH = maxSize; targetW = Math.round(maxSize * ratio); }
+
+		this.dimensions = { width: targetW, height: targetH, ratio };
+		this.resizeCanvas(targetW, targetH);
+		return { targetW, targetH };
 	}
+
+	resizeCanvas(width, height) { this.canvas.width = width; this.canvas.height = height; }
 
 	redraw() {
 		if (!this.layers.length) return;
-
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-		for (const layer of this.layers) {
-			layer.drawTo(this.ctx); // <- uses layer.canvas, opacity, visibility
-		}
-
+		for (const layer of this.layers) layer.drawTo(this.ctx);
 		if (this.toggleGrid) this.drawGrid();
-
 	}
-
 
 	drawGrid() {
-	if (!this.activeLayer) return;
+		if (!this.activeLayer || !this.renderMetrics) return;
 
-	const ctx = this.ctx;
-	const rect = this.canvas.getBoundingClientRect(); // CSS size
-	const scaleX = this.canvas.width / rect.width;
-	const scaleY = this.canvas.height / rect.height;
+const ctx = this.ctx;
+const { canvasW, canvasH, scaleX, scaleY, tempW, tempH } = this.renderMetrics;
 
-	const w = this.canvas.width;
-	const h = this.canvas.height;
+ctx.strokeStyle = "#0c0c0cff";
+ctx.lineWidth = 1 * scaleX;
 
-	const tempW = this.activeLayer.tempWidth || Math.floor(rect.width / this.tileSize) || 1;
-	const tempH = this.activeLayer.tempHeight || Math.floor(rect.height / this.tileSize) || 1;
+// Vertical lines
+for (let i = 0; i <= tempW; i++) {
+	const x = Math.round((i * canvasW) / tempW - 0.5);
+	ctx.beginPath();
+	ctx.moveTo(x, 0);
+	ctx.lineTo(x, canvasH);
+	ctx.stroke();
+}
 
+// Horizontal lines
+for (let i = 0; i <= tempH; i++) {
+	const y = Math.round((i * canvasH) / tempH - 0.5);
+	ctx.beginPath();
+	ctx.moveTo(0, y);
+	ctx.lineTo(canvasW, y);
+	ctx.stroke();
+}
 
-	ctx.strokeStyle = "#0c0c0cff";
-	ctx.lineWidth = 1 * scaleX; // scale lineWidth
-
-	// Vertical lines
-	for (let i = 0; i <= tempW; i++) {
-		const x = Math.round((i * rect.width) / tempW) * scaleX + 0.5;
-		ctx.beginPath();
-		ctx.moveTo(x, 0);
-		ctx.lineTo(x, h);
-		ctx.stroke();
 	}
 
-	// Horizontal lines
-	for (let i = 0; i <= tempH; i++) {
-		const y = Math.round((i * rect.height) / tempH) * scaleY + 0.5;
-		ctx.beginPath();
-		ctx.moveTo(0, y);
-		ctx.lineTo(w, y);
-		ctx.stroke();
-	}
+	// --------------------
+	// Quantization
+	// --------------------
+	// quantizeImage() also uses renderMetrics
+async quantizeImage() {
+    if (!this.activeLayer) return;
+    this.updateRenderMetrics();
+    const { tempW, tempH, canvasW, canvasH } = this.renderMetrics;
+
+    const tempCanvas = await this.timedLog("Quantize Temp Canvas", async () =>
+        this.createTempCanvas(this.activeLayer.rawImage, tempW, tempH, false)
+    );
+
+    const { palette, clusteredData, uniqueCount, clusters } = await this.timedLog("kMeans Quantization", async () =>
+        this.runQuantizationInWorker(tempCanvas, this.colorCount)
+    );
+
+    Object.assign(this.activeLayer, { clusteredData, tempWidth: tempW, tempHeight: tempH, colors: palette, clusters });
+    this.activeLayer.applyClusteredData(clusteredData, tempW, tempH, this.tileSize);
+
+    this.log(`quantizeImage done, totalPixels=${canvasW * canvasH}, uniqueColors=${uniqueCount}, palette=${palette.length}`);
 }
 
 
-
-
-	// Utility wrapper
-	async timedLog(label, fn) {
-		const t0 = performance.now();
-		const result = await fn();
-		const elapsed = (performance.now() - t0).toFixed(2);
-		this.log(`${label}: done in ${elapsed} ms`);
-		return result;
-	}
-
-	// --------------------
-	// Quantize only
-	// --------------------
-	async quantizeImage() {
-		if (!this.activeLayer || !this.dimensions) return;
-
-		//this.activeLayer.opacity = 1;
-		const { width: canvasW, height: canvasH } = this.dimensions;
-		const layer = this.activeLayer;
-
-		// Always start from the raw image
-		const source = layer.rawImage;
-		if (!source) {
-			this.log("No rawImage available for quantization.");
-			return;
-		}
-
-		// Downscale
-		const downscaledWidth = this.tileSize === 1 ? canvasW : Math.ceil(canvasW / this.tileSize);
-		const downscaledHeight = this.tileSize === 1 ? canvasH : Math.ceil(canvasH / this.tileSize);
-
-		// Step 1: Create temporary canvas
-		const tempCanvas = await this.timedLog("Quantize Temp Canvas", async () => {
-			return this.createTempCanvas(source, downscaledWidth, downscaledHeight, false);
-		});
-
-		// Step 2: Run quantization
-		const { palette, clusteredData, uniqueCount , clusters} = await this.timedLog("kMeans Quantization", async () => {
-			return this.runQuantizationInWorker(tempCanvas, this.colorCount);
-		});
-
-		// Step 3: Store result on layer
-		Object.assign(layer, {
-			clusteredData,
-			tempWidth: downscaledWidth,
-			tempHeight: downscaledHeight,
-			colors: palette,
-			clusters
-
-		});
-		//console.log(clusters)
-
-		// Step 4: Apply clustered data
-		layer.applyClusteredData(clusteredData, downscaledWidth, downscaledHeight, this.tileSize);
-
-		// Step 5: Log
-		const totalPixels = canvasW * canvasH;
-		this.log(`quantizeImage: done, totalPixels=${totalPixels}, uniqueColors=${uniqueCount}, palette=${palette.length}`);
-	}
-
-	// --------------------
-	// Apply tiling only (uses previously clustered data)
-	// --------------------
 	applyTileSize() {
 		const layer = this.activeLayer;
 		if (!layer || !layer.clusteredData) return;
-
-		// No need to re-quantize here, just update tiling
 		layer.applyClusteredData(layer.clusteredData, layer.tempWidth, layer.tempHeight, this.tileSize);
-
 		this.redraw();
 		this.log(`applyTileSize: done, tileSize=${this.tileSize}`);
 	}
 
-	// --------------------
-	// Quantize + Tile (convenience)
-	// --------------------
 	async applyQuantizeAndTile() {
 		const t0 = performance.now();
-		await this.quantizeImage(); // generates clustered data
-		this.applyTileSize();       // applies tiling
+		await this.quantizeImage();
+		this.applyTileSize();
 		this.log(`applyQuantizeAndTile: done in ${(performance.now() - t0).toFixed(2)} ms`);
-
-
 	}
-
 
 	// --------------------
 	// Download / Export
 	// --------------------
-	downloadImage(targetWidth, targetHeight) {
+	downloadImage(targetW, targetH) {
 		if (!this.activeLayer) return;
-
+		const layer = this.activeLayer;
 		const tempCanvas = document.createElement("canvas");
-		tempCanvas.width = targetWidth;
-		tempCanvas.height = targetHeight;
+		tempCanvas.width = targetW;
+		tempCanvas.height = targetH;
 		const tctx = tempCanvas.getContext("2d");
 
-		const layer = this.activeLayer;
-
 		if (layer.clusteredData && layer.tempWidth && layer.tempHeight) {
-			// ---- Export crisp pixelated result ----
-
-			const imgData = upscaleClusteredData(
-				layer.clusteredData,
-				layer.tempWidth,
-				layer.tempHeight,
-				targetWidth,
-				targetHeight
-			);
+			const imgData = upscaleClusteredData(layer.clusteredData, layer.tempWidth, layer.tempHeight, targetW, targetH);
 			tctx.putImageData(imgData, 0, 0);
-
 		} else {
-			// ---- Fallback: export the canvas content ----
-			if (targetWidth === layer.width && targetHeight === layer.height) {
-				tctx.putImageData(layer.imageData, 0, 0);
-			} else {
-				tctx.drawImage(layer.canvas, 0, 0, targetWidth, targetHeight);
-			}
+			if (targetW === layer.width && targetH === layer.height) tctx.putImageData(layer.imageData, 0, 0);
+			else tctx.drawImage(layer.canvas, 0, 0, targetW, targetH);
 		}
 
-		// save as PNG
 		tempCanvas.toBlob(blob => {
 			if (!blob) return;
 			const url = URL.createObjectURL(blob);
@@ -430,24 +290,9 @@ export class CanvasManager {
 		}, "image/png");
 	}
 
+	async timedLog(label, fn) { const t0 = performance.now(); const result = await fn(); this.log(`${label}: done in ${(performance.now() - t0).toFixed(2)} ms`); return result; }
 }
 
-function upscaleImageData(srcData, srcW, srcH, targetW, targetH) {
-	const tmp = new ImageData(targetW, targetH);
-	for (let y = 0; y < targetH; y++) {
-		const srcY = Math.floor(y * srcH / targetH);
-		for (let x = 0; x < targetW; x++) {
-			const srcX = Math.floor(x * srcW / targetW);
-			const srcIdx = (srcY * srcW + srcX) * 4;
-			const dstIdx = (y * targetW + x) * 4;
-			tmp.data[ dstIdx ] = srcData[ srcIdx ];
-			tmp.data[ dstIdx + 1 ] = srcData[ srcIdx + 1 ];
-			tmp.data[ dstIdx + 2 ] = srcData[ srcIdx + 2 ];
-			tmp.data[ dstIdx + 3 ] = srcData[ srcIdx + 3 ];
-		}
-	}
-	return tmp;
-}
 
 
 // =====================

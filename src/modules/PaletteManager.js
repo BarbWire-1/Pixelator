@@ -8,6 +8,7 @@ import { smoothSort } from "./smoothSort.js";
 export class PaletteManager {
 	constructor(cm, swatchesContainer, colorPickerEl) {
 		this.cm = cm;
+
 		this.container = swatchesContainer;
 		this.colorPicker = colorPickerEl;
 		this.swatches = [];
@@ -29,19 +30,14 @@ export class PaletteManager {
 		this.clearPaletteContainer();
 		this.addDeselectSwatch();
 
-		// 1. pair each color with its cluster index
-const colorPairs = layer.colors.map((color, i) => ({ color, clusterIndex: i }));
+		const colorPairs = layer.colors.map((color, i) => ({ color, clusterIndex: i }));
+		const sortedPairs = smoothSort(colorPairs.map(p => p.color))
+			.map(sortedColor => colorPairs.find(p => p.color === sortedColor));
 
-// 2. sort by color (smoothSort works on color arrays)
-const sortedPairs = smoothSort(colorPairs.map(p => p.color))
-    .map(sortedColor => colorPairs.find(p => p.color === sortedColor));
-
-// 3. create swatches in sorted order
-sortedPairs.forEach(p => {
-    const indices = layer.clusters[p.clusterIndex];
-    this.addColorSwatch(p.color, indices);
-});
-
+		sortedPairs.forEach(p => {
+			const indices = layer.clusters[p.clusterIndex];
+			this.addColorSwatch(p.color, indices);
+		});
 	}
 
 	addDeselectSwatch() {
@@ -94,7 +90,6 @@ sortedPairs.forEach(p => {
 		this.selectedSwatch = swatch;
 
 		this.cm.redraw();
-		this.drawBoundingBox(swatch.pixelRefs);
 
 		this.colorPicker.value = this.rgbToHex(swatch.r, swatch.g, swatch.b);
 		document.getElementById("hexValue").textContent = this.colorPicker.value;
@@ -109,73 +104,27 @@ sortedPairs.forEach(p => {
 	}
 
 	// -----------------------------
-	// PIXEL OPERATIONS
+	// PIXEL OPERATIONS (all delegated to DrawingTool)
 	// -----------------------------
-	applyPixels(swatch, { erase = false, r = null, g = null, b = null } = {}) {
-		if (!swatch?.pixelRefs?.length) return;
-
-		const layer = this.cm.activeLayer;
-		if (!layer || !layer.clusteredData) return;
-
-		const data = layer.clusteredData;
-		const newR = r ?? swatch.r;
-		const newG = g ?? swatch.g;
-		const newB = b ?? swatch.b;
-
-		for (const idx of swatch.pixelRefs) {
-			if (erase) {
-				data[idx + 3] = 0;
-			} else {
-				data[idx] = newR;
-				data[idx + 1] = newG;
-				data[idx + 2] = newB;
-				data[idx + 3] = 255;
-			}
-		}
-
-		layer.applyClusteredData(data, layer.tempWidth, layer.tempHeight, this.cm.tileSize);
-		this.cm.redraw();
-	}
-
-	// WRONG
-	drawBoundingBox(pixelRefs, color = "limegreen") {
-		if (!pixelRefs?.length) return;
-
-		const layer = this.cm.activeLayer;
-		const tempWidth = layer.tempWidth || layer.imageData.width;
-
-		let minX = Infinity, maxX = -1, minY = Infinity, maxY = -1;
-
-		for (const idx of pixelRefs) {
-			const x = idx % tempWidth;
-			const y = Math.floor(idx / tempWidth);
-			minX = Math.min(minX, x);
-			maxX = Math.max(maxX, x);
-			minY = Math.min(minY, y);
-			maxY = Math.max(maxY, y);
-		}
-
-		const ctx = this.cm.ctx;
-		ctx.strokeStyle = color;
-		ctx.lineWidth = 1;
-		ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+	applyPixels(swatch, options = {}) {
+		this.cm.tool.applyPixels(swatch, options);
 	}
 
 	highlightSwatch(swatch) {
-    if (!swatch.pixelRefs.length) return;
-    this.applyPixels(swatch, { r: 0, g: 255, b: 255 }); // cyan highlight
-}
+		if (!swatch) return;
+			console.log(this.cm)
+		this.cm.tool.highlightSwatch(swatch);
+	}
 
-resetSwatchColor(swatch) {
-    if (!swatch.pixelRefs.length) return;
-    this.applyPixels(swatch); // restore swatch’s r,g,b
-}
-
+	resetSwatchColor(swatch) {
+		if (!swatch) return;
+		this.cm.tool.restoreSwatchColor(swatch);
+	}
 
 	eraseSelectedPixels() {
 		const sw = this.selectedSwatch;
 		if (!sw) return;
-		this.applyPixels(sw, { erase: true });
+		this.cm.tool.applyPixels(sw, { erase: true });
 		sw.div.classList.add("erased");
 	}
 
@@ -184,11 +133,14 @@ resetSwatchColor(swatch) {
 		if (!sw) return;
 		sw.r = r; sw.g = g; sw.b = b;
 
-		this.applyPixels(sw, { r, g, b });
+		this.cm.tool.applyPixels(sw, { r, g, b });
 		sw.div.style.backgroundColor = `rgb(${r},${g},${b})`;
 		this.colorPicker.value = this.rgbToHex(r, g, b);
 	}
 
+	// -----------------------------
+	// UTILITIES
+	// -----------------------------
 	rgbToHex(r, g, b) {
 		return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
 	}
