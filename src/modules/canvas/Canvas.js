@@ -23,7 +23,7 @@ export class CanvasManager {
 
 		this.tempCanvas = document.createElement('canvas');
 		this.tempCtx = this.tempCanvas.getContext('2d', {
-			willReadFrequently: true,
+			willReadFrequently: true
 		});
 
 		this.layers = [];
@@ -50,7 +50,7 @@ export class CanvasManager {
 		if (!this.showLogs) return;
 
 		const elapsed = ((performance.now() - this.startTime) / 1000).toFixed(
-			3,
+			3
 		);
 
 		this.logEntries.push({
@@ -73,7 +73,7 @@ export class CanvasManager {
 		if (!this.worker) {
 			this.worker = new Worker(
 				new URL('./quantizeWorker.js', import.meta.url),
-				{ type: 'module' },
+				{ type: 'module' }
 			);
 		}
 	}
@@ -91,7 +91,7 @@ export class CanvasManager {
 					clusters,
 					clusteredData,
 					uniqueCount,
-					error,
+					error
 				} = e.data;
 				if (success)
 					resolve({ palette, clusters, clusteredData, uniqueCount });
@@ -103,7 +103,7 @@ export class CanvasManager {
 				imageData,
 				colorCount,
 				iterations: this.kMeansIterations,
-				allOpaque: this.allOpaque,
+				allOpaque: this.allOpaque
 			});
 		});
 	}
@@ -127,12 +127,12 @@ export class CanvasManager {
 		width,
 		height,
 		smoothing = false,
-		stepName = 'Temp Canvas',
+		stepName = 'Temp Canvas'
 	) {
 		const start = performance.now();
 		this._drawToCtx(this.tempCtx, img, width, height, smoothing);
 		this.log(
-			`${stepName} done in ${(performance.now() - start).toFixed(2)} ms`,
+			`${stepName} done in ${(performance.now() - start).toFixed(2)} ms`
 		);
 		return this.tempCanvas;
 	}
@@ -154,7 +154,7 @@ export class CanvasManager {
 		original.imageData = new ImageData(
 			new Uint8ClampedArray(imageData.data),
 			targetW,
-			targetH,
+			targetH
 		);
 		original.ctx.putImageData(original.imageData, 0, 0);
 		original.opacity = 0.5;
@@ -163,7 +163,7 @@ export class CanvasManager {
 		base.imageData = new ImageData(
 			new Uint8ClampedArray(imageData.data),
 			targetW,
-			targetH,
+			targetH
 		);
 		base.ctx.putImageData(base.imageData, 0, 0);
 		base.rawImage = img;
@@ -201,7 +201,7 @@ export class CanvasManager {
 			scaleX,
 			scaleY,
 			tempW,
-			tempH,
+			tempH
 		};
 	}
 
@@ -283,13 +283,13 @@ export class CanvasManager {
 					this.activeLayer.rawImage,
 					tempW,
 					tempH,
-					false,
-				),
+					false
+				)
 		);
 
 		const { palette, clusteredData, uniqueCount, clusters } =
 			await this.timedLog('kMeans Quantization', async () =>
-				this.runQuantizationInWorker(tempCanvas, this.colorCount),
+				this.runQuantizationInWorker(tempCanvas, this.colorCount)
 			);
 
 		Object.assign(this.activeLayer, {
@@ -297,19 +297,19 @@ export class CanvasManager {
 			tempWidth: tempW,
 			tempHeight: tempH,
 			colors: palette,
-			clusters,
+			clusters
 		});
 		this.activeLayer.applyClusteredData(
 			clusteredData,
 			tempW,
 			tempH,
-			this.tileSize,
+			this.tileSize
 		);
 
 		this.log(
 			`quantizeImage done, totalPixels=${
 				canvasW * canvasH
-			}, uniqueColors=${uniqueCount}, palette=${palette.length}`,
+			}, uniqueColors=${uniqueCount}, palette=${palette.length}`
 		);
 	}
 
@@ -320,7 +320,7 @@ export class CanvasManager {
 			layer.clusteredData,
 			layer.tempWidth,
 			layer.tempHeight,
-			this.tileSize,
+			this.tileSize
 		);
 		this.redraw();
 		this.log(`applyTileSize: done, tileSize=${this.tileSize}`);
@@ -332,8 +332,8 @@ export class CanvasManager {
 		this.applyTileSize();
 		this.log(
 			`applyQuantizeAndTile: done in ${(performance.now() - t0).toFixed(
-				2,
-			)} ms`,
+				2
+			)} ms`
 		);
 	}
 
@@ -354,7 +354,7 @@ export class CanvasManager {
 				layer.tempWidth,
 				layer.tempHeight,
 				targetW,
-				targetH,
+				targetH
 			);
 			tctx.putImageData(imgData, 0, 0);
 		} else {
@@ -434,7 +434,7 @@ CanvasManager.prototype.getState = function () {
 			imageData: new ImageData(
 				new Uint8ClampedArray(layer.imageData.data),
 				layer.width,
-				layer.height,
+				layer.height
 			),
 			clusteredData: layer.clusteredData
 				? [...layer.clusteredData]
@@ -442,8 +442,8 @@ CanvasManager.prototype.getState = function () {
 			opacity: layer.opacity ?? 1,
 			hidden: layer.hidden ?? false,
 			// **keep rawImage reference, but never mutate it**
-			rawImage: layer.rawImage || null,
-		})),
+			rawImage: layer.rawImage || null
+		}))
 	};
 };
 
