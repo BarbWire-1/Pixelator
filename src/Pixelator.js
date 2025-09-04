@@ -1,78 +1,87 @@
-/*
-MIT License
-Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
-*/
+/**
+ * /*
+ * MIT License
+ * Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
+ *
+ * @format
+ */
 
-import { DrawingTool } from "./modules/DrawingTool.js";
-import { CanvasManager } from "./modules/canvas/Canvas.js";
-import { PaletteManager } from "./modules/PaletteManager.js";
-import { HistoryManager, debug } from "./modules/HistoryManager.js";
-import { DimensionModal } from "./modules/ModalManager.js";
+import { DrawingTool } from './modules/DrawingTool.js';
+import { CanvasManager } from './modules/canvas/Canvas.js';
+import { PaletteManager } from './modules/PaletteManager.js';
+import { HistoryManager, debug } from './modules/HistoryManager.js';
+import { DownloadModal } from './modules/DownloadModal.js';
 
-import "./UI/resizer.js"
+import './UI/resizer.js';
 
 export function initPixelator() {
 	// --- DOM Elements ---
 	const elements = {
-		canvas: document.getElementById("canvas"),
-		swatchesContainer: document.getElementById("swatchesContainer"),
-		colorPicker: document.getElementById("colorPicker"),
-		eraseBtn: document.getElementById("eraseBtn"),
-		createPaletteBtn: document.getElementById("createPalette"),
-		toggleGridCheckbox: document.getElementById("toggleGrid"),
-		modeSelect: document.getElementById("modeSelect"),
-		displayEl: document.getElementById("display"),
-		fileInput: document.getElementById("raw-image-input"),
-		liveUpdateInput: document.getElementById("liveUpdateInput"),
-		tileSizeInput: document.getElementById("tile-size-input"),
-		colorCountInput: document.getElementById("color-count-input"),
-		quantizeTileBtn: document.getElementById("quantize-tile-btn"),
-		zoomInput: document.getElementById("zoom"),
-		undoBtn: document.getElementById("undoBtn"),
-		redoBtn: document.getElementById("redoBtn"),
-		alphaCheck: document.getElementById('alpha')
+		canvas: document.getElementById('canvas'),
+		swatchesContainer: document.getElementById('swatchesContainer'),
+		colorPicker: document.getElementById('colorPicker'),
+		eraseBtn: document.getElementById('eraseBtn'),
+		createPaletteBtn: document.getElementById('createPalette'),
+		toggleGridCheckbox: document.getElementById('toggleGrid'),
+		modeSelect: document.getElementById('modeSelect'),
+		displayEl: document.getElementById('display'),
+		fileInput: document.getElementById('raw-image-input'),
+		liveUpdateInput: document.getElementById('liveUpdateInput'),
+		tileSizeInput: document.getElementById('tile-size-input'),
+		colorCountInput: document.getElementById('color-count-input'),
+		quantizeTileBtn: document.getElementById('quantize-tile-btn'),
+		zoomInput: document.getElementById('zoom'),
+		undoBtn: document.getElementById('undoBtn'),
+		redoBtn: document.getElementById('redoBtn'),
+		alphaCheck: document.getElementById('alpha'),
 	};
-	const logPanel = document.getElementById("log-panel");
+	const logPanel = document.getElementById('log-panel');
 
 	// --- Managers ---
 	const history = new HistoryManager();
 	const cm = new CanvasManager(elements.canvas);
-	const pm = new PaletteManager(cm, elements.swatchesContainer, elements.colorPicker);
-	const tool = new DrawingTool(cm, elements.colorPicker, elements.modeSelect, elements.displayEl);
+	const pm = new PaletteManager(
+		cm,
+		elements.swatchesContainer,
+		elements.colorPicker,
+	);
+	const tool = new DrawingTool(
+		cm,
+		elements.colorPicker,
+		elements.modeSelect,
+		elements.displayEl,
+	);
 	cm.tool = tool;
 
-
-
 	// init once on page load
-	const downloadModal = new DimensionModal(
-		"downloadModal",
-		"downloadWidth",
-		"downloadHeight",
-		"lockAspect",
-		"cancelDownload",
-		"confirmDownload"
+	const downloadModal = new DownloadModal(
+		'downloadModal',
+		'downloadWidth',
+		'downloadHeight',
+		'lockAspect',
+		'cancelDownload',
+		'confirmDownload',
 	);
 
+	elements.alphaCheck.addEventListener(
+		'change',
+		e => (cm.activeLayer.allOpaque = e.target.checked),
+	);
+	document.getElementById('downloadBtn').addEventListener('click', () => {
+		console.log('clicked dl');
+		// later, when user clicks download
+		downloadModal.open(
+			cm.activeLayer.rawImage?.width || cm.activeLayer.width,
+			cm.activeLayer.rawImage?.height || cm.activeLayer.height,
+			(targetW, targetH) => cm.downloadImage(targetW, targetH),
+		);
 
-elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e.target.checked)
-	document.getElementById("downloadBtn")
-		.addEventListener('click', () => {
-			console.log("clicked dl")
-			// later, when user clicks download
-			downloadModal.open(
-				cm.activeLayer.rawImage?.width || cm.activeLayer.width,
-				cm.activeLayer.rawImage?.height || cm.activeLayer.height,
-				(targetW, targetH) => cm.downloadImage(targetW, targetH)
-			);
-
-			//cm.downloadImage()
-			snapshot("Image loaded")
-		})
-
-
+		//cm.downloadImage()
+		snapshot('Image loaded');
+	});
 
 	//HISTORY
-	function snapshot(desc = "", { transient = false } = {}) {
+	function snapshot(desc = '', { transient = false } = {}) {
 		if (transient) return; // skip auto redraw snapshots
 
 		const state = {
@@ -83,12 +92,11 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e
 			colorCount: cm.colorCount,
 			toggleGrid: cm.toggleGrid,
 			zoom: elements.zoomInput.value,
-			desc
+			desc,
 		};
 		history.push(state);
-		debug("Snapshot taken:", desc);
+		debug('Snapshot taken:', desc);
 	}
-
 
 	async function restoreState(state) {
 		if (!state) return;
@@ -103,20 +111,15 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e
 		elements.zoomInput.value = state.zoom;
 		elements.canvas.style.transform = `scale(${parseFloat(state.zoom)})`;
 
-		debug("Inputs synced to history state");
+		debug('Inputs synced to history state');
 	}
-
-
-
-
-
 
 	// --- Event Listeners ---
 	// --- Tool listeners ---
 	function setupToolListeners() {
 		document.querySelectorAll('input[name="toolMode"]').forEach(radio => {
-			radio.addEventListener("change", () => {
-				tool.isEraser = radio.value === "eraser";
+			radio.addEventListener('change', () => {
+				tool.isEraser = radio.value === 'eraser';
 				tool.updateDisplay();
 				snapshot(`Tool changed to ${tool.mode}`);
 			});
@@ -125,44 +128,47 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e
 
 	// --- Palette listeners ---
 	function setupPaletteListeners() {
-		elements.eraseBtn.addEventListener("click", () => {
+		elements.eraseBtn.addEventListener('click', () => {
 			pm.eraseSelectedPixels();
-			snapshot("Erased selected swatch");
+			snapshot('Erased selected swatch');
 		});
 
-		elements.createPaletteBtn.addEventListener("click", () => {
+		elements.createPaletteBtn.addEventListener('click', () => {
 			pm.createPalette();
-			snapshot("Created new palette");
+			snapshot('Created new palette');
 		});
 
 		const hexToRgb = hex =>
 			hex.match(/[A-Fa-f0-9]{2}/g).map(v => parseInt(v, 16));
 
-		const handlePicker = (e) => {
-			const [ r, g, b ] = hexToRgb(e.target.value);
-			const isCommit = e.type === "change"; // only commit on release
+		const handlePicker = e => {
+			const [r, g, b] = hexToRgb(e.target.value);
+			const isCommit = e.type === 'change'; // only commit on release
 			pm.recolorSelectedPixels(r, g, b, isCommit);
-			if (isCommit) snapshot("Recolored selected swatch");
+			if (isCommit) snapshot('Recolored selected swatch');
 		};
 
-		elements.colorPicker.addEventListener("input", handlePicker);
-		elements.colorPicker.addEventListener("change", handlePicker);
+		elements.colorPicker.addEventListener('input', handlePicker);
+		elements.colorPicker.addEventListener('change', handlePicker);
 	}
 
 	// --- Grid toggle ---
 	function setupGridListener() {
-		elements.toggleGridCheckbox.addEventListener("change", () => {
+		elements.toggleGridCheckbox.addEventListener('change', () => {
 			cm.toggleGrid = elements.toggleGridCheckbox.checked;
 			cm.redraw();
-			snapshot("Toggle grid");
+			snapshot('Toggle grid');
 		});
 	}
 
 	// --- Tile size & color count ---
 	function setupTileAndColorInputs() {
-		elements.liveUpdateInput.addEventListener('change', (e) => cm.liveUpdate = e.target.checked);
+		elements.liveUpdateInput.addEventListener(
+			'change',
+			e => (cm.liveUpdate = e.target.checked),
+		);
 
-		elements.tileSizeInput.addEventListener("change", async (e) => {
+		elements.tileSizeInput.addEventListener('change', async e => {
 			cm.tileSize = parseInt(e.target.value, 10) || 1;
 			tool.tileSize = cm.tileSize;
 			if (cm.liveUpdate) {
@@ -175,7 +181,7 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e
 			}
 		});
 
-		elements.colorCountInput.addEventListener("change", (e) => {
+		elements.colorCountInput.addEventListener('change', e => {
 			cm.colorCount = parseInt(e.target.value, 10) || 16;
 			snapshot(`Color count changed to ${cm.colorCount}`);
 		});
@@ -183,18 +189,20 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e
 
 	// --- Quantize button ---
 	function setupQuantizeButton() {
-		elements.quantizeTileBtn.addEventListener("click", async () => {
+		elements.quantizeTileBtn.addEventListener('click', async () => {
 			if (!cm.activeLayer || !cm.activeLayer.rawImage) return;
 			await cm.applyQuantizeAndTile();
 			pm.createPalette();
-			snapshot(`Quantized image with ${cm.colorCount} colors, tile size ${cm.tileSize}`);
+			snapshot(
+				`Quantized image with ${cm.colorCount} colors, tile size ${cm.tileSize}`,
+			);
 		});
 	}
 
 	// --- Image loader ---
 	function setupImageLoader() {
-		elements.fileInput.addEventListener("change", (e) => {
-			const file = e.target.files[ 0 ];
+		elements.fileInput.addEventListener('change', e => {
+			const file = e.target.files[0];
 			if (!file) return;
 
 			const img = new Image();
@@ -202,26 +210,26 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e
 
 			img.onload = async () => {
 				await cm.loadImage(img);
-				setupLayerPanelBindings(cm)
+				setupLayerPanelBindings(cm);
 				elements.quantizeTileBtn.disabled = false;
-				snapshot("Image loaded");
+				snapshot('Image loaded');
 			};
 
-			logPanel.innerHTML = "";
-			elements.swatchesContainer.innerHTML = "";
-
+			logPanel.innerHTML = '';
+			elements.swatchesContainer.innerHTML = '';
 		});
 	}
 	function setupZoom() {
-		const container = document.getElementById("canvas-container");
+		const container = document.getElementById('canvas-container');
 		const canvas = elements.canvas;
 		let lastScale = 1;
 
-		elements.zoomInput.addEventListener("input", () => {
+		elements.zoomInput.addEventListener('input', () => {
 			const scale = parseFloat(elements.zoomInput.value);
 
 			// Change transform origin depending on scale
-			canvas.style.transformOrigin = scale > 1.8 ? "top left" : "center center";
+			canvas.style.transformOrigin =
+				scale > 1.8 ? 'top left' : 'center center';
 			canvas.style.transform = `scale(${scale})`;
 
 			// Save scroll relative to canvas top-left
@@ -236,63 +244,56 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e
 		});
 
 		// Commit snapshot only on release (change event), not every input
-		elements.zoomInput.addEventListener("change", () => {
+		elements.zoomInput.addEventListener('change', () => {
 			snapshot(`Zoom set to ${elements.zoomInput.value}`);
 		});
 	}
 	// --- Layer panel bindings ---
 	function setupLayerPanelBindings(cm) {
-		const panel = document.getElementById("layer-panel");
+		const panel = document.getElementById('layer-panel');
 		if (!panel) return;
 
 		cm.layers.forEach((layer, idx) => {
-			const entry = panel.querySelector(`.layer-entry[data-index="${idx}"]`);
+			const entry = panel.querySelector(
+				`.layer-entry[data-index="${idx}"]`,
+			);
 			if (!entry) return;
 
-			const checkbox = entry.querySelector(".layer-visible");
-			const slider = entry.querySelector(".layer-opacity");
+			const checkbox = entry.querySelector('.layer-visible');
+			const slider = entry.querySelector('.layer-opacity');
 
 			if (checkbox) {
-
 				checkbox.checked = layer.visible ?? true;
-				checkbox.addEventListener("change", () => {
+				checkbox.addEventListener('change', () => {
 					layer.visible = checkbox.checked;
-					layer.redraw()
+					layer.redraw();
 					cm.redraw();
 				});
 			}
 
 			if (slider) {
-
 				slider.value = layer.opacity ?? 1;
-				slider.addEventListener("input", () => {
+				slider.addEventListener('input', () => {
 					layer.opacity = parseFloat(slider.value);
-					layer.redraw()
+					layer.redraw();
 					cm.redraw();
 				});
 			}
 		});
 	}
 
-
-
-
-
 	// --- Undo / Redo ---
 	function setupUndoRedo() {
-		elements.undoBtn.addEventListener("click", () => {
+		elements.undoBtn.addEventListener('click', () => {
 			const state = history.undo();
 			if (state) restoreState(state);
 		});
 
-		elements.redoBtn.addEventListener("click", () => {
+		elements.redoBtn.addEventListener('click', () => {
 			const state = history.redo();
 			if (state) restoreState(state);
 		});
 	}
-
-
-
 
 	// --- Initialize all ---
 	setupToolListeners();
@@ -305,52 +306,53 @@ elements.alphaCheck.addEventListener('change',(e)=> cm.activeLayer.allOpaque = e
 
 	setupUndoRedo();
 
-
 	// JUST spliced in to log the quantization stuff in panel
 
-	const showLogsCheckbox = document.getElementById("show-logs-checkbox");
+	const showLogsCheckbox = document.getElementById('show-logs-checkbox');
 
 	cm.showLogs = showLogsCheckbox.checked;
 
 	// Sync checkbox with flag
-	showLogsCheckbox.addEventListener("change", () => {
+	showLogsCheckbox.addEventListener('change', () => {
 		cm.showLogs = showLogsCheckbox.checked;
-		logPanel.innerHTML = ''
+		logPanel.innerHTML = '';
 	});
-
 
 	// Wrap logEntries with Proxy
 	cm.logEntries = new Proxy(cm.logEntries, {
 		set(target, property, value) {
-			target[ property ] = value;
+			target[property] = value;
 
 			if (!isNaN(property)) {
 				const entry = value;
 				if (entry && entry.message && cm.showLogs) {
-					const el = document.createElement("div");
-					el.style.fontFamily = "monospace";
-					el.style.fontSize = "12px";
-					el.style.color = "limegreen";
-					el.style.whiteSpace = "pre";
+					const el = document.createElement('div');
+					el.style.fontFamily = 'monospace';
+					el.style.fontSize = '12px';
+					el.style.color = 'limegreen';
+					el.style.whiteSpace = 'pre';
 
 					// Split the message into lines
-					const lines = entry.message.split("\n");
-					const firstLine = `[${entry.time}] ${lines[ 0 ]}`;
-					const restLines = lines.slice(1).map(line => "    " + line);
+					const lines = entry.message.split('\n');
+					const firstLine = `[${entry.time}] ${lines[0]}`;
+					const restLines = lines.slice(1).map(line => '    ' + line);
 
-					el.textContent = [ firstLine, ...restLines ].join("\n");
+					el.textContent = [firstLine, ...restLines].join('\n');
 
 					logPanel.appendChild(el);
 					logPanel.scrollTop = logPanel.scrollHeight;
 				}
 			}
 			return true;
-		}
+		},
 	});
-	document.getElementById('kMeans-iter').addEventListener('change', (e) => cm.kMeansIterations = +e.target.value)
-	snapshot("Initial state");
-
-
+	document
+		.getElementById('kMeans-iter')
+		.addEventListener(
+			'change',
+			e => (cm.kMeansIterations = +e.target.value),
+		);
+	snapshot('Initial state');
 
 	// Return managers in case you need them outside
 	return { cm, pm, tool, history, snapshot };

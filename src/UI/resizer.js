@@ -1,4 +1,4 @@
-
+/** @format */
 
 (() => {
 	const resizer = document.getElementById('resizer');
@@ -12,9 +12,12 @@
 		document.body.style.cursor = 'col-resize';
 	});
 
-	document.addEventListener('mousemove', (e) => {
+	document.addEventListener('mousemove', e => {
 		if (!isResizing) return;
-		const newWidth = Math.min(Math.max(50, window.innerWidth - e.clientX), 1000);
+		const newWidth = Math.min(
+			Math.max(50, window.innerWidth - e.clientX),
+			1000,
+		);
 		sidebar.style.width = newWidth + 'px';
 	});
 

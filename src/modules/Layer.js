@@ -1,7 +1,9 @@
-import { snapshot } from "../main.js";
+/** @format */
+
+import { snapshot } from '../main.js';
 
 export class Layer {
-	constructor (width, height, name = "Layer", rawImage = null) {
+	constructor(width, height, name = 'Layer', rawImage = null) {
 		this.width = width;
 		this.height = height;
 		this.name = name;
@@ -22,24 +24,22 @@ export class Layer {
 	}
 
 	initCanvas() {
-		this.canvas = document.createElement("canvas");
+		this.canvas = document.createElement('canvas');
 		this.canvas.width = this.width;
 		this.canvas.height = this.height;
-		this.ctx = this.canvas.getContext("2d", { willReadFrequently: true });
+		this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
 		this.ctx.imageSmoothingEnabled = false;
 	}
 
 	initTempCanvas() {
-		this._tempCanvas = document.createElement("canvas");
-		this._tempCtx = this._tempCanvas.getContext("2d");
+		this._tempCanvas = document.createElement('canvas');
+		this._tempCtx = this._tempCanvas.getContext('2d');
 	}
 
 	initImageData() {
 		this.imageData = new ImageData(this.width, this.height);
 		this.redraw();
 	}
-
-
 
 	redraw() {
 		this.ctx.putImageData(this.imageData, 0, 0);
@@ -49,9 +49,8 @@ export class Layer {
 		if (!this.visible) return;
 		ctx.globalAlpha = this.opacity;
 		ctx.drawImage(this.canvas, x, y);
-		ctx.globalAlpha = 1;// reset
+		ctx.globalAlpha = 1; // reset
 	}
-
 
 	applyClusteredData(clusteredData, tempWidth, tempHeight, highlight = -1) {
 		const w = this.width;
@@ -63,12 +62,12 @@ export class Layer {
 		// Start with current image data so we don't overwrite with black
 		const output = new Uint8ClampedArray(this.imageData.data);
 
-		const getColor = (idx) => {
+		const getColor = idx => {
 			const base = idx * 4;
-			const r = clusteredData[ base ];
-			const g = clusteredData[ base + 1 ];
-			const b = clusteredData[ base + 2 ];
-			const a = clusteredData[ base + 3 ];
+			const r = clusteredData[base];
+			const g = clusteredData[base + 1];
+			const b = clusteredData[base + 2];
+			const a = clusteredData[base + 3];
 
 			// skip invalid/empty pixels
 			if (r === 0 && g === 0 && b === 0 && a === 0) return null;
@@ -81,10 +80,10 @@ export class Layer {
 			for (let y = yStart; y < yStart + hRect; y++) {
 				let offset = y * rowStride + xStart * 4;
 				for (let x = 0; x < wRect; x++, offset += 4) {
-					output[ offset ] = r;
-					output[ offset + 1 ] = g;
-					output[ offset + 2 ] = b;
-					output[ offset + 3 ] = a;
+					output[offset] = r;
+					output[offset + 1] = g;
+					output[offset + 2] = b;
+					output[offset + 3] = a;
 				}
 			}
 		};
@@ -105,16 +104,15 @@ export class Layer {
 			for (let y = yStart; y < yStart + hRect; y++) {
 				let offset = y * rowStride + xStart * 4;
 				for (let x = 0; x < wRect; x++, offset += 4) {
-					this.imageData.data[ offset ] = color.r;
-					this.imageData.data[ offset + 1 ] = color.g;
-					this.imageData.data[ offset + 2 ] = color.b;
-					this.imageData.data[ offset + 3 ] = color.a;
+					this.imageData.data[offset] = color.r;
+					this.imageData.data[offset + 1] = color.g;
+					this.imageData.data[offset + 2] = color.b;
+					this.imageData.data[offset + 3] = color.a;
 				}
 			}
 		}
 		this.redraw();
 	}
-
 
 	getState() {
 		return {
@@ -123,12 +121,12 @@ export class Layer {
 			imageData: new ImageData(
 				new Uint8ClampedArray(this.imageData.data),
 				this.width,
-				this.height
+				this.height,
 			),
 			visible: this.visible,
 			opacity: this.opacity,
 			name: this.name,
-			rawImage: this.rawImage // optional reference
+			rawImage: this.rawImage, // optional reference
 		};
 	}
 

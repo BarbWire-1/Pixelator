@@ -1,12 +1,14 @@
+/** @format */
 
 (function initSidebarUI() {
 	const GRID_SIZE = 20;
 
 	// --- Section data class ---
 	class SectionBox {
-		constructor (el) {
+		constructor(el) {
 			this.el = el;
 			const r = el.getBoundingClientRect();
+
 			this.x = r.left;
 			this.y = r.top;
 			this.w = r.width;
@@ -15,6 +17,7 @@
 
 		updateFromDOM() {
 			const r = this.el.getBoundingClientRect();
+
 			this.x = r.left;
 			this.y = r.top;
 			this.w = r.width;
@@ -22,8 +25,8 @@
 		}
 
 		applyPosition() {
-			this.el.style.left = this.x + "px";
-			this.el.style.top = this.y + "px";
+			this.el.style.left = this.x + 'px';
+			this.el.style.top = this.y + 'px';
 		}
 	}
 
@@ -57,16 +60,17 @@
 			sidebar.appendChild(section.el);
 		}
 
-		section.el.classList.remove("floating");
-		section.el.classList.add("snapped");
-		section.el.style=""
-		
+		section.el.classList.remove('floating');
+		section.el.classList.add('snapped');
+		section.el.style = '';
 	};
 
 	const resolveFloatingOverlap = (section, others) => {
 		let collision = true;
+
 		while (collision) {
 			collision = false;
+
 			for (let other of others) {
 				if (other === section) continue;
 				if (isOverlapping(section, other)) {
@@ -80,14 +84,14 @@
 
 	// --- Initialize sections ---
 	const sections = [];
-	document.querySelectorAll(".sidebar-section").forEach((el) => {
+	document.querySelectorAll('.sidebar-section').forEach(el => {
 		const section = new SectionBox(el);
 		sections.push(section);
 
-		const header = el.querySelector("h3");
-		header.style.cursor = "grab";
+		const header = el.querySelector('h3');
+		header.style.cursor = 'grab';
 
-		header.addEventListener("mousedown", (e) => {
+		header.addEventListener('mousedown', e => {
 			e.preventDefault();
 			let isDragging = false;
 			const startX = e.clientX;
@@ -99,15 +103,15 @@
 
 			el.style.zIndex = 2000;
 
-			const onMouseMove = (eMove) => {
+			const onMouseMove = eMove => {
 				const dx = eMove.clientX - startX;
 				const dy = eMove.clientY - startY;
 
 				if (!isDragging && Math.sqrt(dx * dx + dy * dy) > 5) {
 					isDragging = true;
-					el.classList.remove("floating");
-					el.classList.add("floating");
-					el.style.position = "absolute";
+					el.classList.remove('floating');
+					el.classList.add('floating');
+					el.style.position = 'absolute';
 					document.body.appendChild(el);
 				}
 
@@ -118,38 +122,51 @@
 				}
 			};
 
-			const onMouseUp = (eUp) => {
-				document.removeEventListener("mousemove", onMouseMove);
-				document.removeEventListener("mouseup", onMouseUp);
+			const onMouseUp = eUp => {
+				document.removeEventListener('mousemove', onMouseMove);
+				document.removeEventListener('mouseup', onMouseUp);
 
 				if (isDragging) {
-					el.style.zIndex = "";
-					const sidebar = document.getElementById("sidebar");
+					el.style.zIndex = '';
+					const sidebar = document.getElementById('sidebar');
 					section.updateFromDOM();
 
-					const { left, top, width, height } = sidebar.getBoundingClientRect();
+					const { left, top, width, height } =
+						sidebar.getBoundingClientRect();
 					const sidebarBox = { x: left, y: top, w: width, h: height };
 
 					if (isOverlapping(section, sidebarBox)) {
-						const sidebarSections = Array.from(sidebar.querySelectorAll(".sidebar-section"))
-							.map((el) => sections.find((s) => s.el === el));
-						snapBackToSidebar(section, sidebar, eUp.clientY, sidebarSections);
+						const sidebarSections = Array.from(
+							sidebar.querySelectorAll('.sidebar-section'),
+						).map(el => sections.find(s => s.el === el));
+						snapBackToSidebar(
+							section,
+							sidebar,
+							eUp.clientY,
+							sidebarSections,
+						);
 					} else {
 						// floating on grid
-						section.x = Math.round(section.x / GRID_SIZE) * GRID_SIZE;
-						section.y = Math.round(section.y / GRID_SIZE) * GRID_SIZE;
+						section.x =
+							Math.round(section.x / GRID_SIZE) * GRID_SIZE;
+						section.y =
+							Math.round(section.y / GRID_SIZE) * GRID_SIZE;
 
-						const floatingSections = sections.filter(s => s.el.classList.contains("floating") && s !== section);
+						const floatingSections = sections.filter(
+							s =>
+								s.el.classList.contains('floating') &&
+								s !== section,
+						);
 						resolveFloatingOverlap(section, floatingSections);
 						section.applyPosition();
 					}
 				} else {
-					el.classList.toggle("collapsed");
+					el.classList.toggle('collapsed');
 				}
 			};
 
-			document.addEventListener("mousemove", onMouseMove);
-			document.addEventListener("mouseup", onMouseUp);
+			document.addEventListener('mousemove', onMouseMove);
+			document.addEventListener('mouseup', onMouseUp);
 		});
 	});
 })();

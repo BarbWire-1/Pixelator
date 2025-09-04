@@ -2,10 +2,7 @@
 MIT License
 Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
 */
-/*
-MIT License
-Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
-*/
+
 function getColorAt(data, index) {
 	return { r: data[ index ], g: data[ index + 1 ], b: data[ index + 2 ], a: data[ index + 3 ] };
 }

@@ -1,9 +1,13 @@
-/*
-MIT License
-Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
-*/
-import { snapshot } from "../main.js";
-import { smoothSort } from "./smoothSort.js";
+/**
+ * /*
+ * MIT License
+ * Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
+ *
+ * @format
+ */
+
+import { snapshot } from '../main.js';
+import { smoothSort } from './smoothSort.js';
 
 export class PaletteManager {
 	constructor(cm, swatchesContainer, colorPickerEl) {
@@ -17,7 +21,7 @@ export class PaletteManager {
 		this.swatchTemplate = document.createElement('template');
 		this.swatchTemplate.innerHTML = `<div class="swatch"></div>`;
 
-		this.container.addEventListener("click", e => this.handleClick(e));
+		this.container.addEventListener('click', e => this.handleClick(e));
 	}
 
 	// -----------------------------
@@ -30,9 +34,13 @@ export class PaletteManager {
 		this.clearPaletteContainer();
 		this.addDeselectSwatch();
 
-		const colorPairs = layer.colors.map((color, i) => ({ color, clusterIndex: i }));
-		const sortedPairs = smoothSort(colorPairs.map(p => p.color))
-			.map(sortedColor => colorPairs.find(p => p.color === sortedColor));
+		const colorPairs = layer.colors.map((color, i) => ({
+			color,
+			clusterIndex: i,
+		}));
+		const sortedPairs = smoothSort(colorPairs.map(p => p.color)).map(
+			sortedColor => colorPairs.find(p => p.color === sortedColor),
+		);
 
 		sortedPairs.forEach(p => {
 			const indices = layer.clusters[p.clusterIndex];
@@ -41,9 +49,9 @@ export class PaletteManager {
 	}
 
 	addDeselectSwatch() {
-		const div = document.createElement("div");
-		div.className = "swatch deselect";
-		div.title = "Deselect";
+		const div = document.createElement('div');
+		div.className = 'swatch deselect';
+		div.title = 'Deselect';
 		this.container.appendChild(div);
 	}
 
@@ -51,9 +59,10 @@ export class PaletteManager {
 		const [r, g, b] = colorArray;
 		if (r + g + b === 0) return;
 
-		const div = this.swatchTemplate.content.firstElementChild.cloneNode(true);
+		const div =
+			this.swatchTemplate.content.firstElementChild.cloneNode(true);
 		div.style.backgroundColor = `rgb(${r},${g},${b})`;
-		div.title = "Keep pressed to highlight pixels";
+		div.title = 'Keep pressed to highlight pixels';
 		this.container.appendChild(div);
 
 		const swatch = { r, g, b, div, pixelRefs: indices };
@@ -63,12 +72,16 @@ export class PaletteManager {
 	}
 
 	attachSwatchListeners(swatch) {
-		swatch.div.addEventListener("mousedown", () => this.highlightSwatch(swatch));
-		swatch.div.addEventListener("mouseup", () => this.resetSwatchColor(swatch));
+		swatch.div.addEventListener('mousedown', () =>
+			this.highlightSwatch(swatch),
+		);
+		swatch.div.addEventListener('mouseup', () =>
+			this.resetSwatchColor(swatch),
+		);
 	}
 
 	clearPaletteContainer() {
-		this.container.innerHTML = "";
+		this.container.innerHTML = '';
 		this.swatches = [];
 	}
 
@@ -76,31 +89,33 @@ export class PaletteManager {
 	// SWATCH SELECTION
 	// -----------------------------
 	handleClick(e) {
-		const div = e.target.closest(".swatch");
+		const div = e.target.closest('.swatch');
 		if (!div) return;
-		if (div.classList.contains("deselect")) return this.deselectSwatch();
+		if (div.classList.contains('deselect')) return this.deselectSwatch();
 
 		const swatch = this.swatches.find(s => s.div === div);
 		if (swatch) this.selectSwatch(swatch);
 	}
 
 	selectSwatch(swatch) {
-		if (this.selectedSwatch) this.selectedSwatch.div.classList.remove("selected");
-		swatch.div.classList.add("selected");
+		if (this.selectedSwatch)
+			this.selectedSwatch.div.classList.remove('selected');
+		swatch.div.classList.add('selected');
 		this.selectedSwatch = swatch;
 
 		this.cm.redraw();
 
 		this.colorPicker.value = this.rgbToHex(swatch.r, swatch.g, swatch.b);
-		document.getElementById("hexValue").textContent = this.colorPicker.value;
+		document.getElementById('hexValue').textContent =
+			this.colorPicker.value;
 	}
 
 	deselectSwatch() {
 		if (!this.selectedSwatch) return;
-		this.selectedSwatch.div.classList.remove("selected");
+		this.selectedSwatch.div.classList.remove('selected');
 		this.selectedSwatch = null;
 		this.cm.redraw();
-		this.colorPicker.value = "#ff0000";
+		this.colorPicker.value = '#ff0000';
 	}
 
 	// -----------------------------
@@ -112,7 +127,7 @@ export class PaletteManager {
 
 	highlightSwatch(swatch) {
 		if (!swatch) return;
-			console.log(this.cm)
+		console.log(this.cm);
 		this.cm.tool.highlightSwatch(swatch);
 	}
 
@@ -125,13 +140,15 @@ export class PaletteManager {
 		const sw = this.selectedSwatch;
 		if (!sw) return;
 		this.cm.tool.applyPixels(sw, { erase: true });
-		sw.div.classList.add("erased");
+		sw.div.classList.add('erased');
 	}
 
 	recolorSelectedPixels(r, g, b) {
 		const sw = this.selectedSwatch;
 		if (!sw) return;
-		sw.r = r; sw.g = g; sw.b = b;
+		sw.r = r;
+		sw.g = g;
+		sw.b = b;
 
 		this.cm.tool.applyPixels(sw, { r, g, b });
 		sw.div.style.backgroundColor = `rgb(${r},${g},${b})`;
@@ -142,7 +159,9 @@ export class PaletteManager {
 	// UTILITIES
 	// -----------------------------
 	rgbToHex(r, g, b) {
-		return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
+		return (
+			'#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')
+		);
 	}
 
 	// -----------------------------
@@ -154,7 +173,7 @@ export class PaletteManager {
 			g: s.g,
 			b: s.b,
 			selected: this.selectedSwatch === s,
-			pixelRefs: s.pixelRefs
+			pixelRefs: s.pixelRefs,
 		}));
 	}
 
