@@ -1,5 +1,4 @@
 /**
- * /*
  * MIT License
  * Copyright(c) 2025 Barbara Kälin aka BarbWire - 1
  *
@@ -38,6 +37,7 @@ export class PaletteManager {
 			color,
 			clusterIndex: i,
 		}));
+
 		const sortedPairs = smoothSort(colorPairs.map(p => p.color)).map(
 			sortedColor => colorPairs.find(p => p.color === sortedColor),
 		);
@@ -119,7 +119,7 @@ export class PaletteManager {
 	}
 
 	// -----------------------------
-	// PIXEL OPERATIONS (all delegated to DrawingTool)
+	// PIXEL OPERATIONS (delegated to DrawingTool)
 	// -----------------------------
 	applyPixels(swatch, options = {}) {
 		this.cm.tool.applyPixels(swatch, options);
@@ -127,7 +127,6 @@ export class PaletteManager {
 
 	highlightSwatch(swatch) {
 		if (!swatch) return;
-		console.log(this.cm);
 		this.cm.tool.highlightSwatch(swatch);
 	}
 
@@ -135,25 +134,51 @@ export class PaletteManager {
 		if (!swatch) return;
 		this.cm.tool.restoreSwatchColor(swatch);
 	}
-// TODO remove swatch and set px to 0000
-	eraseSelectedPixels() {
-		const sw = this.selectedSwatch;
-		if (!sw) return;
-		this.cm.tool.applyPixels(sw, { erase: true });
-		sw.div.classList.add('erased');
-	}
 
-	recolorSelectedPixels(r, g, b) {
-		const sw = this.selectedSwatch;
-		if (!sw) return;
-		sw.r = r;
-		sw.g = g;
-		sw.b = b;
+	// -----------------------------
+// SWATCH OPERATIONS
+// -----------------------------
+eraseSelectedPixels() {
+	const sw = this.selectedSwatch;
+	if (!sw) return;
+	// Delegate erasing to DrawingTool
+	this.cm.tool.applySwatch(sw, { erase: true });
+	sw.div.classList.add('erased');
+}
 
-		this.cm.tool.applyPixels(sw, { r, g, b });
-		sw.div.style.backgroundColor = `rgb(${r},${g},${b})`;
-		this.colorPicker.value = this.rgbToHex(r, g, b);
-	}
+recolorSelectedPixels(r, g, b) {
+	const sw = this.selectedSwatch;
+	if (!sw) return;
+
+	// Update swatch color
+	sw.r = r;
+	sw.g = g;
+	sw.b = b;
+
+	// Delegate recoloring to DrawingTool
+	this.cm.tool.applySwatch(sw, { erase: false, r, g, b });
+
+	// Update swatch element and color picker
+	sw.div.style.backgroundColor = `rgb(${r},${g},${b})`;
+	this.colorPicker.value = this.cm.tool.rgbToHex
+		? this.cm.tool.rgbToHex(r, g, b)
+		: this.rgbToHex(r, g, b);
+	document.getElementById('hexValue').textContent = this.colorPicker.value;
+}
+
+highlightSwatch(swatch) {
+	if (!swatch) return;
+	// Use DrawingTool to apply highlight
+	this.cm.tool.applySwatch(swatch, { erase: false, r: 0, g: 255, b: 255 });
+	this.cm.tool.drawSwatchBoundingBox(swatch.pixelRefs);
+}
+
+restoreSwatchColor(swatch) {
+	if (!swatch) return;
+	// Restore original swatch color via DrawingTool
+	this.cm.tool.applySwatch(swatch);
+}
+
 
 	// -----------------------------
 	// UTILITIES

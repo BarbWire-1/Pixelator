@@ -171,6 +171,15 @@ export class CanvasManager {
 		this.layers.push(original, base);
 		this.activeLayer = base;
 
+
+		// NEW
+		base.editedClusteredData = new Uint8ClampedArray(base.width * base.height * 4);
+base.ctx.drawImage(base.rawImage, 0, 0, base.width, base.height);
+base.editedClusteredData.set(
+  base.ctx.getImageData(0, 0, base.width, base.height).data
+);
+		//---------------------------------------------------------------
+
 		this.redraw();
 		this.log(`Image loaded: ${img.width}x${img.height}`);
 		return base;
@@ -270,48 +279,64 @@ export class CanvasManager {
 	// --------------------
 	// Quantization
 	// --------------------
-	// quantizeImage() also uses renderMetrics
-	async quantizeImage() {
-		if (!this.activeLayer) return;
-		this.updateRenderMetrics();
-		const { tempW, tempH, canvasW, canvasH } = this.renderMetrics;
+	async quantizeImage({ source = 'edited' } = {}) {
+    if (!this.activeLayer) return;
+    this.updateRenderMetrics();
+    const { tempW, tempH, canvasW, canvasH } = this.renderMetrics;
 
-		const tempCanvas = await this.timedLog(
-			'Quantize Temp Canvas',
-			async () =>
-				this.createTempCanvas(
-					this.activeLayer.rawImage,
-					tempW,
-					tempH,
-					false
-				)
-		);
+    let fullCanvas;
 
-		const { palette, clusteredData, uniqueCount, clusters } =
-			await this.timedLog('kMeans Quantization', async () =>
-				this.runQuantizationInWorker(tempCanvas, this.colorCount)
-			);
+    if (source === 'edited' && this.activeLayer.editedClusteredData) {
+        fullCanvas = document.createElement('canvas');
+        fullCanvas.width = canvasW;
+        fullCanvas.height = canvasH;
+        const fullCtx = fullCanvas.getContext('2d');
 
-		Object.assign(this.activeLayer, {
-			clusteredData,
-			tempWidth: tempW,
-			tempHeight: tempH,
-			colors: palette,
-			clusters
-		});
-		this.activeLayer.applyClusteredData(
-			clusteredData,
-			tempW,
-			tempH,
-			this.tileSize
-		);
+        const fullImageData = new ImageData(
+            this.activeLayer.editedClusteredData,
+            canvasW,
+            canvasH
+        );
+        fullCtx.putImageData(fullImageData, 0, 0);
 
-		this.log(
-			`quantizeImage done, totalPixels=${
-				canvasW * canvasH
-			}, uniqueColors=${uniqueCount}, palette=${palette.length}`
-		);
-	}
+    } else {
+        // use raw image to quantize
+        fullCanvas = this.activeLayer.rawImage;
+    }
+
+    // downscale for k-means
+    const tempCanvas = await this.timedLog(
+        `Quantize Temp Canvas (${source})`,
+        async () => this.createTempCanvas(fullCanvas, tempW, tempH, false)
+    );
+
+    // run k-means
+    const { palette, clusteredData, uniqueCount, clusters } =
+        await this.timedLog('kMeans Quantization', async () =>
+            this.runQuantizationInWorker(tempCanvas, this.colorCount)
+        );
+
+    // Update low-res clustered data
+    Object.assign(this.activeLayer, {
+        clusteredData,
+        tempWidth: tempW,
+        tempHeight: tempH,
+        colors: palette,
+        clusters
+    });
+
+    this.activeLayer.applyClusteredData(
+        clusteredData,
+        tempW,
+        tempH,
+        this.tileSize
+    );
+
+    this.log(
+        `quantizeImage done, totalPixels=${canvasW * canvasH}, uniqueColors=${uniqueCount}, palette=${palette.length}`
+    );
+}
+
 
 	applyTileSize() {
 		const layer = this.activeLayer;
@@ -326,9 +351,9 @@ export class CanvasManager {
 		this.log(`applyTileSize: done, tileSize=${this.tileSize}`);
 	}
 
-	async applyQuantizeAndTile() {
+	async applyQuantizeAndTile({ source = 'edited' } ) {
 		const t0 = performance.now();
-		await this.quantizeImage();
+		await this.quantizeImage({source});
 		this.applyTileSize();
 		this.log(
 			`applyQuantizeAndTile: done in ${(performance.now() - t0).toFixed(
@@ -403,6 +428,9 @@ CanvasManager.prototype.getState = function () {
 			),
 			clusteredData: layer.clusteredData
 				? [...layer.clusteredData]
+				: null,
+			editedlusteredData: layer.editedClusteredData
+				? [...layer.editedClusteredData]
 				: null,
 			opacity: layer.opacity ?? 1,
 			hidden: layer.hidden ?? false,

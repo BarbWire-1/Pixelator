@@ -172,6 +172,6 @@ export async function kMeansQuantize(
 		clusteredData[i + 3] =
 			a === 0 ? 0 : allOpaque ? 255 : palette[best][3] ?? 255;
 	}
-	console.log(clusters);
+	
 	return { palette, clusteredData, uniqueCount: uniqueColors.size, clusters };
 }

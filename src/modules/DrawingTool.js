@@ -34,7 +34,7 @@ export class DrawingTool {
 			mousedown: e => this.startDraw(e),
 			mousemove: e => this.drawMove(e),
 			mouseup: () => this.endDraw(),
-			mouseleave: () => this.endDraw(),
+			mouseleave: () => this.endDraw()
 		};
 		for (const [event, handler] of Object.entries(canvasEvents)) {
 			this.canvas.addEventListener(event, handler);
@@ -56,7 +56,7 @@ export class DrawingTool {
 			r: parseInt(hex.substr(1, 2), 16),
 			g: parseInt(hex.substr(3, 2), 16),
 			b: parseInt(hex.substr(5, 2), 16),
-			a: 255,
+			a: 255
 		};
 	}
 
@@ -84,31 +84,57 @@ export class DrawingTool {
 	// -----------------------------
 	// Brush / Draw
 	// -----------------------------
+
 	applyClusterPixel(cx, cy, color = this.currentColor) {
 		const layer = this.cm.activeLayer;
-		if (!layer || !layer.clusteredData) return;
+		if (!layer || !layer.clusteredData || !layer.editedClusteredData)
+			return;
 
-		const idx = (cy * layer.tempWidth + cx) * 4;
-		const data = layer.clusteredData;
+		const { canvasW, canvasH, tempW, tempH } = this.cm.renderMetrics;
 
+		const tileWidth = canvasW / tempW;
+		const tileHeight = canvasH / tempH;
+
+		// update TEMP clusteredData (the low-res tile to draw on)
+		const tempIdx = (cy * tempW + cx) * 4;
 		if (this.isEraser) {
-			data[idx + 3] = 0; // transparent
+			layer.clusteredData[tempIdx + 3] = 0;
 		} else {
-			data[idx] = color.r;
-			data[idx + 1] = color.g;
-			data[idx + 2] = color.b;
-			data[idx + 3] = color.a;
+			layer.clusteredData[tempIdx] = color.r;
+			layer.clusteredData[tempIdx + 1] = color.g;
+			layer.clusteredData[tempIdx + 2] = color.b;
+			layer.clusteredData[tempIdx + 3] = color.a;
 		}
 
-		// Apply mirrors if needed
+		// update FULLSIZE editedClusteredData
+		const startX = Math.floor(cx * tileWidth);
+		const endX = Math.floor((cx + 1) * tileWidth);
+		const startY = Math.floor(cy * tileHeight);
+		const endY = Math.floor((cy + 1) * tileHeight);
+
+		for (let y = startY; y < endY; y++) {
+			for (let x = startX; x < endX; x++) {
+				const fullIdx = (y * canvasW + x) * 4;
+				if (this.isEraser) {
+					layer.editedClusteredData[fullIdx + 3] = 0;
+				} else {
+					layer.editedClusteredData[fullIdx] = color.r;
+					layer.editedClusteredData[fullIdx + 1] = color.g;
+					layer.editedClusteredData[fullIdx + 2] = color.b;
+					layer.editedClusteredData[fullIdx + 3] = color.a;
+				}
+			}
+		}
+
+
 		this.applyMirrors(cx, cy, color);
 
-		// Redraw with tilesize
+		// redraw tiles from clusteredData
 		layer.applyClusteredData(
-			data,
-			layer.tempWidth,
-			layer.tempHeight,
-			this.cm.tileSize,
+			layer.clusteredData,
+			tempW,
+			tempH,
+			this.cm.tileSize
 		);
 		this.cm.redraw();
 	}
@@ -199,7 +225,7 @@ export class DrawingTool {
 			data[startIdx],
 			data[startIdx + 1],
 			data[startIdx + 2],
-			data[startIdx + 3],
+			data[startIdx + 3]
 		];
 
 		const stack = [{ x: startCx, y: startCy }];
@@ -270,39 +296,67 @@ export class DrawingTool {
 	}
 
 	//NEW
-	// Apply new color to associated clusters
+	// apply new color to associated clusters
 	applyPixels(swatch, { erase = false, r = null, g = null, b = null } = {}) {
 		if (!swatch?.pixelRefs?.length) return;
 
 		const layer = this.cm.activeLayer;
-		if (!layer || !layer.clusteredData) return;
+		if (!layer || !layer.clusteredData || !layer.editedClusteredData)
+			return;
 
-		const data = layer.clusteredData;
+		const { canvasW, canvasH, tempW, tempH } = this.cm.renderMetrics;
+		const tileWidth = canvasW / tempW;
+		const tileHeight = canvasH / tempH;
+
 		const newR = r ?? swatch.r;
 		const newG = g ?? swatch.g;
 		const newB = b ?? swatch.b;
 
 		for (const idx of swatch.pixelRefs) {
-			if (erase) {
-				data[idx + 3] = 0;
-			} else {
-				data[idx] = newR;
-				data[idx + 1] = newG;
-				data[idx + 2] = newB;
-				data[idx + 3] = 255;
+			const p = Math.floor(idx / 4);
+			const cx = p % tempW;
+			const cy = Math.floor(p / tempW);
+
+			// update temp clusteredData
+			const tempIdx = (cy * tempW + cx) * 4;
+			if (erase) layer.clusteredData[tempIdx + 3] = 0;
+			else {
+				layer.clusteredData[tempIdx] = newR;
+				layer.clusteredData[tempIdx + 1] = newG;
+				layer.clusteredData[tempIdx + 2] = newB;
+				layer.clusteredData[tempIdx + 3] = 255;
+			}
+
+			// draw as pixels in editedClusteredData !!!!
+			const startX = Math.floor(cx * tileWidth);
+			const endX = Math.floor((cx + 1) * tileWidth);
+			const startY = Math.floor(cy * tileHeight);
+			const endY = Math.floor((cy + 1) * tileHeight);
+
+			for (let y = startY; y < endY; y++) {
+				for (let x = startX; x < endX; x++) {
+					const fullIdx = (y * canvasW + x) * 4;
+					if (erase) layer.editedClusteredData[fullIdx + 3] = 0;
+					else {
+						layer.editedClusteredData[fullIdx] = newR;
+						layer.editedClusteredData[fullIdx + 1] = newG;
+						layer.editedClusteredData[fullIdx + 2] = newB;
+						layer.editedClusteredData[fullIdx + 3] = 255;
+					}
+				}
 			}
 		}
 
 		layer.applyClusteredData(
-			data,
-			layer.tempWidth,
-			layer.tempHeight,
-			this.cm.tileSize,
+			layer.clusteredData,
+			tempW,
+			tempH,
+			this.cm.tileSize
 		);
 		this.cm.redraw();
 	}
 
-	// Draw bounding box around a set of pixelRefs
+	// draw bounding box around a set of pixelRefs
 	drawSwatchBoundingBox(pixelRefs, color = 'limegreen') {
 		if (!pixelRefs?.length) return;
 		const layer = this.cm.activeLayer;
@@ -334,7 +388,7 @@ export class DrawingTool {
 
 		const ctx = this.cm.ctx;
 		ctx.save();
-		console.log(scaleX);
+
 		ctx.strokeStyle = color;
 		ctx.lineWidth = 1 * scaleX;
 
@@ -342,30 +396,29 @@ export class DrawingTool {
 			Math.floor(minLeft),
 			Math.floor(minTop),
 			Math.max(1, Math.ceil(maxRight - minLeft)),
-			Math.max(1, Math.ceil(maxBottom - minTop)),
+			Math.max(1, Math.ceil(maxBottom - minTop))
 		);
 		ctx.restore();
 	}
-	// Apply a swatch, optionally overriding color or erasing
+	// recolor or erase optionally
 	applySwatch(swatch, { erase = false, r = null, g = null, b = null } = {}) {
 		const color = erase
 			? null
-			: { r: r ?? swatch.r, g: g ?? swatch.g, b: b ?? swatch.b, a: 255 };
+			: { r: 0, g: 0, b:  0, a: 0 };
 
 		this.applyPixels(swatch, {
 			erase,
 			r: color?.r,
 			g: color?.g,
-			b: color?.b,
+			b: color?.b
 		});
 	}
-	// Highlight / restore swatch using DrawingTool
+
 	highlightSwatch(swatch) {
 		this.applySwatch(swatch, { r: 0, g: 255, b: 255 }); // cyan highlight
 		this.drawSwatchBoundingBox(swatch.pixelRefs);
 	}
 
-	// Restore original swatch color
 	restoreSwatchColor(swatch) {
 		if (!swatch) return;
 		this.applySwatch(swatch); // no override => uses swatch.r/g/b
@@ -376,7 +429,7 @@ export class DrawingTool {
 	// -----------------------------
 	getActiveTool() {
 		const selected = document.querySelector(
-			'input[name="toolMode"]:checked',
+			'input[name="toolMode"]:checked'
 		);
 		return selected ? selected.value : null;
 	}
@@ -394,12 +447,12 @@ export class DrawingTool {
 }
 
 // -----------------------------
-// Prototype augmentation
+// HISTORY SUPPORT
 // -----------------------------
 DrawingTool.prototype.getState = function () {
 	return {
 		mode: this.mode,
-		isEraser: this.isEraser,
+		isEraser: this.isEraser
 	};
 };
 

@@ -21,7 +21,7 @@ export function initPixelator() {
 		swatchesContainer: document.getElementById('swatchesContainer'),
 		colorPicker: document.getElementById('colorPicker'),
 		eraseBtn: document.getElementById('eraseBtn'),
-		// createPaletteBtn: document.getElementById('createPalette'),
+		 toggleSource: document.getElementById('toggleSource'),
 		toggleGridCheckbox: document.getElementById('toggleGrid'),
 		modeSelect: document.getElementById('modeSelect'),
 		displayEl: document.getElementById('display'),
@@ -172,7 +172,7 @@ export function initPixelator() {
 			cm.tileSize = parseInt(e.target.value, 10) || 1;
 			tool.tileSize = cm.tileSize;
 			if (cm.liveUpdate) {
-				await cm.applyQuantizeAndTile();
+				await cm.applyQuantizeAndTile({source :cm.source});
 				pm.createPalette();
 				snapshot('Live update tileSize applied');
 			} else {
@@ -181,17 +181,28 @@ export function initPixelator() {
 			}
 		});
 
-		elements.colorCountInput.addEventListener('change', e => {
+		elements.colorCountInput.addEventListener('change', async e => {
 			cm.colorCount = parseInt(e.target.value, 10) || 16;
+			await cm.applyQuantizeAndTile({source :cm.source});
+				pm.createPalette();
 			snapshot(`Color count changed to ${cm.colorCount}`);
 		});
 	}
 
-	// --- Quantize button ---
+
+	// --- Quantize source and button ---
 	function setupQuantizeButton() {
+
+		// Reference to your checkbox and button
+    const toggleSource = elements.toggleSource;
+
 		elements.quantizeTileBtn.addEventListener('click', async () => {
 			if (!cm.activeLayer || !cm.activeLayer.rawImage) return;
-			await cm.applyQuantizeAndTile();
+
+			// Determine source based on checkbox
+        const source = toggleSource.checked ? 'edited' : 'original';
+cm.source = source
+			await cm.applyQuantizeAndTile({source});
 			pm.createPalette();
 			snapshot(
 				`Quantized image with ${cm.colorCount} colors, tile size ${cm.tileSize}`,
