@@ -135,7 +135,7 @@ export class PaletteManager {
 		if (!swatch) return;
 		this.cm.tool.restoreSwatchColor(swatch);
 	}
-
+// TODO remove swatch and set px to 0000
 	eraseSelectedPixels() {
 		const sw = this.selectedSwatch;
 		if (!sw) return;

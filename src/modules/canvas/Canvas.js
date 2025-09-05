@@ -385,42 +385,7 @@ export class CanvasManager {
 	}
 }
 
-// =====================
-// HISTORY SUPPORT
-// =====================
-// CanvasManager.prototype.getState = function () {
-// 	return {
-// 		activeLayer: this.activeLayer
-// 			? {
-// 				width: this.activeLayer.width,
-// 				height: this.activeLayer.height,
-// 				data: new Uint8ClampedArray(this.activeLayer.imageData.data)
-// 			}
-// 			: null,
-// 		tileSize: this.tileSize,
-// 		colorCount: this.colorCount,
-// 		toggleGrid: this.toggleGrid
-// 	};
-// };
-//
-// CanvasManager.prototype.setState = function (state) {
-// 	if (state.activeLayer) {
-// 		this.activeLayer = {
-// 			width: state.activeLayer.width,
-// 			height: state.activeLayer.height,
-// 			imageData: new ImageData(
-// 				new Uint8ClampedArray(state.activeLayer.data),
-// 				state.activeLayer.width,
-// 				state.activeLayer.height
-// 			)
-// 		};
-// 		this.resizeCanvas(state.activeLayer.width, state.activeLayer.height);
-// 	}
-// 	this.tileSize = state.tileSize;
-// 	this.colorCount = state.colorCount;
-// 	this.toggleGrid = state.toggleGrid;
-// 	this.redraw();
-// };
+
 CanvasManager.prototype.getState = function () {
 	return {
 		tileSize: this.tileSize,
@@ -451,21 +416,21 @@ CanvasManager.prototype.setState = function (state) {
 	if (!state || !state.layers) return;
 
 	// Restore layer properties in-place
-	state.layers.forEach((savedLayer, idx) => {
+	state.layers.forEach((l, idx) => {
 		const layer = this.layers[idx];
 		if (!layer) return;
 
-		layer.width = savedLayer.width;
-		layer.height = savedLayer.height;
-		layer.opacity = savedLayer.opacity ?? 1;
-		layer.hidden = savedLayer.hidden ?? false;
+		layer.width = l.width;
+		layer.height = l.height;
+		layer.opacity = l.opacity ?? 1;
+		layer.hidden = l.hidden ?? false;
 
 		// Keep rawImage intact
-		layer.imageData.data.set(savedLayer.imageData.data);
+		layer.imageData.data.set(l.imageData.data);
 		layer.ctx.putImageData(layer.imageData, 0, 0);
 
-		layer.clusteredData = savedLayer.clusteredData
-			? [...savedLayer.clusteredData]
+		layer.clusteredData = l.clusteredData
+			? [...l.clusteredData]
 			: null;
 	});
 

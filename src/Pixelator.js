@@ -21,7 +21,7 @@ export function initPixelator() {
 		swatchesContainer: document.getElementById('swatchesContainer'),
 		colorPicker: document.getElementById('colorPicker'),
 		eraseBtn: document.getElementById('eraseBtn'),
-		createPaletteBtn: document.getElementById('createPalette'),
+		// createPaletteBtn: document.getElementById('createPalette'),
 		toggleGridCheckbox: document.getElementById('toggleGrid'),
 		modeSelect: document.getElementById('modeSelect'),
 		displayEl: document.getElementById('display'),
@@ -133,10 +133,10 @@ export function initPixelator() {
 			snapshot('Erased selected swatch');
 		});
 
-		elements.createPaletteBtn.addEventListener('click', () => {
-			pm.createPalette();
-			snapshot('Created new palette');
-		});
+		// elements.createPaletteBtn.addEventListener('click', () => {
+		// 	pm.createPalette();
+		// 	snapshot('Created new palette');
+		// });
 
 		const hexToRgb = hex =>
 			hex.match(/[A-Fa-f0-9]{2}/g).map(v => parseInt(v, 16));
@@ -357,3 +357,120 @@ export function initPixelator() {
 	// Return managers in case you need them outside
 	return { cm, pm, tool, history, snapshot };
 }
+
+
+
+/*
+import { DrawingTool } from './modules/DrawingTool.js';
+import { CanvasManager } from './modules/canvas/Canvas.js';
+import { PaletteManager } from './modules/PaletteManager.js';
+import { HistoryManager, debug } from './modules/HistoryManager.js';
+import { DownloadModal } from './modules/DownloadModal.js';
+
+export function initPixelator() {
+  // -----------------------------
+  // MANAGERS
+  // -----------------------------
+  const history = new HistoryManager();
+  const cm = new CanvasManager(null);
+  const tool = new DrawingTool(cm, null, null, null);
+  const pm = new PaletteManager(cm, null, null);
+  cm.tool = tool;
+
+  // -----------------------------
+  // SNAPSHOT / HISTORY UTILS
+  // -----------------------------
+  function snapshot(desc = '') {
+    const state = {
+      canvas: cm.getState(),
+      palette: pm.getState(),
+      tool: tool.getState(),
+      tileSize: cm.tileSize,
+      colorCount: cm.colorCount,
+      toggleGrid: cm.toggleGrid,
+      zoom: document.getElementById('zoom')?.value || 1,
+      desc,
+    };
+    history.push(state);
+    debug('Snapshot taken:', desc);
+  }
+
+  async function restoreState(state) {
+    if (!state) return;
+    cm.setState(state.canvas);
+    pm.setState(state.palette);
+    tool.setState(state.tool);
+
+    // update linked inputs automatically
+    const uiMap = {
+      tileSize: '#tile-size-input',
+      colorCount: '#color-count-input',
+      toggleGrid: '#toggleGrid',
+      zoom: '#zoom',
+    };
+
+    for (const [prop, selector] of Object.entries(uiMap)) {
+      const el = document.querySelector(selector);
+      if (!el) continue;
+      if (prop === 'toggleGrid') el.checked = state.toggleGrid;
+      else el.value = state[prop] ?? el.value;
+    }
+
+    document.getElementById('canvas').style.transform = `scale(${parseFloat(state.zoom)})`;
+  }
+
+  // -----------------------------
+  // HELPERS
+  // -----------------------------
+  const hexToRgb = hex => hex.match(/[A-Fa-f0-9]{2}/g).map(v => parseInt(v, 16));
+
+  // -----------------------------
+  // UI BINDINGS DECLARATIVE
+  // -----------------------------
+  const uiBindings = [
+    { selector: '#modeSelect', events: { change: el => { tool.mode = el.value; tool.updateDisplay(); snapshot('Tool mode changed'); } } },
+    { selector: 'input[name="toolMode"]', all: true, events: { change: el => { tool.isEraser = el.value === 'eraser'; tool.updateDisplay(); snapshot(`Tool changed to ${tool.mode}`); } } },
+    { selector: '#eraseBtn', events: { click: el => { pm.eraseSelectedPixels(); snapshot('Erased selected swatch'); } } },
+    { selector: '#colorPicker', events: {
+        input: el => { const [r,g,b] = hexToRgb(el.value); pm.recolorSelectedPixels(r,g,b); },
+        change: el => snapshot('Recolored selected swatch')
+      }
+    },
+    { selector: '#toggleGrid', events: { change: el => { cm.toggleGrid = el.checked; cm.redraw(); snapshot('Toggled grid'); } } },
+    { selector: '#tile-size-input', events: { change: async el => { cm.tileSize = parseInt(el.value,10); if(cm.liveUpdate){ await cm.applyQuantizeAndTile(); pm.createPalette(); snapshot('Tile size live-updated'); } else { cm.redraw(); snapshot('Tile size changed'); } } } },
+    { selector: '#color-count-input', events: { change: el => { cm.colorCount = parseInt(el.value,10); snapshot('Color count changed'); } } },
+    { selector: '#quantize-tile-btn', events: { click: async el => { await cm.applyQuantizeAndTile(); pm.createPalette(); snapshot('Quantized image'); } } },
+    { selector: '#raw-image-input', events: { change: async el => {
+        const file = el.files[0]; if(!file) return;
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = async () => { await cm.loadImage(img); snapshot('Image loaded'); };
+      }
+    } },
+    { selector: '#zoom', events: {
+        input: el => { const scale = parseFloat(el.value); document.getElementById('canvas').style.transformOrigin = scale>1.8?'top left':'center center'; document.getElementById('canvas').style.transform = `scale(${scale})`; },
+        change: el => snapshot(`Zoom set to ${el.value}`)
+      }
+    },
+    { selector: '#undoBtn', events: { click: el => restoreState(history.undo()) } },
+    { selector: '#redoBtn', events: { click: el => restoreState(history.redo()) } },
+  ];
+
+  // -----------------------------
+  // ATTACH ALL BINDINGS
+  // -----------------------------
+  for (const binding of uiBindings) {
+    const elements = binding.all ? document.querySelectorAll(binding.selector) : [document.querySelector(binding.selector)];
+    for (const el of elements) {
+      if (!el) continue;
+      for (const [evt, handler] of Object.entries(binding.events)) {
+        el.addEventListener(evt, e => handler(el, e));
+      }
+    }
+  }
+
+  snapshot('Initial state');
+
+  return { cm, tool, pm, history, snapshot, restoreState };
+}
+*/

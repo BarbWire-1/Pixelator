@@ -270,7 +270,7 @@ export class DrawingTool {
 	}
 
 	//NEW
-	// Apply a swatch to its pixels
+	// Apply new color to associated clusters
 	applyPixels(swatch, { erase = false, r = null, g = null, b = null } = {}) {
 		if (!swatch?.pixelRefs?.length) return;
 
