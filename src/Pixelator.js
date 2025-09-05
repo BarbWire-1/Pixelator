@@ -183,8 +183,10 @@ export function initPixelator() {
 
 		elements.colorCountInput.addEventListener('change', async e => {
 			cm.colorCount = parseInt(e.target.value, 10) || 16;
-			await cm.applyQuantizeAndTile({source :cm.source});
+			if (cm.liveUpdate) {
+				await cm.applyQuantizeAndTile({ source: cm.source });
 				pm.createPalette();
+			}
 			snapshot(`Color count changed to ${cm.colorCount}`);
 		});
 	}
