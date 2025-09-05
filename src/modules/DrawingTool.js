@@ -126,7 +126,6 @@ export class DrawingTool {
 			}
 		}
 
-
 		this.applyMirrors(cx, cy, color);
 
 		// redraw tiles from clusteredData
@@ -404,7 +403,7 @@ export class DrawingTool {
 	applySwatch(swatch, { erase = false, r = null, g = null, b = null } = {}) {
 		const color = erase
 			? null
-			: { r: 0, g: 0, b:  0, a: 0 };
+			: { r: r ?? swatch.r, g: g ?? swatch.g, b: b ?? swatch.b, a: 255 };
 
 		this.applyPixels(swatch, {
 			erase,
