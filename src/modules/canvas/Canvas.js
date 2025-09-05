@@ -373,9 +373,9 @@ base.editedClusteredData.set(
 		tempCanvas.height = targetH;
 		const tctx = tempCanvas.getContext('2d');
 
-		if (layer.clusteredData && layer.tempWidth && layer.tempHeight) {
+		if (layer.editedClusteredData && layer.tempWidth && layer.tempHeight) {
 			const imgData = upscaleClusteredData(
-				layer.clusteredData,
+				layer.editedClusteredData,
 				layer.tempWidth,
 				layer.tempHeight,
 				targetW,
